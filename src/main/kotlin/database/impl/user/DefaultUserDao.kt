@@ -8,11 +8,15 @@ import org.koin.core.annotation.Single
 @Single([UserDao::class])
 class DefaultUserDao : UserDao {
 
-    override suspend fun upsertUser(user: UserEntity): Unit = runQuery {
+    override suspend fun getUser(id: Long): UserEntity? = runQuery {
+        UserTableEntity.find { UserTable.id eq id }.firstOrNull()?.toEntity()
+    }
+
+    override suspend fun upsertUser(user: UserEntity): Long = runQuery {
         UserTableEntity.new {
             this.email = user.email
             this.password = user.password
-        }
+        }.id.value
     }
 
     override suspend fun getUserByEmail(email: String): UserEntity? = runQuery {
