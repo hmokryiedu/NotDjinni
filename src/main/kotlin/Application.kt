@@ -4,6 +4,7 @@ import io.ktor.server.application.*
 import io.ktor.server.netty.*
 import io.ktor.server.resources.*
 import not.djinni.database.NotDjinniDatabase
+import not.djinni.presentation.plugins.installAuthentication
 import not.djinni.presentation.plugins.installKoin
 import not.djinni.presentation.plugins.installSerialization
 import not.djinni.presentation.router.Router
@@ -16,6 +17,7 @@ fun main(args: Array<String>) {
 fun Application.module() {
     NotDjinniDatabase.init()
     installKoin()
+    installAuthentication()
     install(Resources)
     installSerialization()
     get<Router>().install(this)
