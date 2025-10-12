@@ -3,6 +3,7 @@ package not.djinni.auth
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.config.yaml.YamlConfigLoader
+import not.djinni.auth.model.JwtConfiguration
 import org.koin.core.annotation.Single
 import java.io.File
 import java.security.KeyFactory
@@ -16,67 +17,54 @@ import java.util.Date
 @Single(binds = [TokenProvider::class])
 class DefaultTokenProvider : TokenProvider {
 
-    private lateinit var issuer: String
-    private lateinit var audience: String
-    private lateinit var realm: String
     private lateinit var privateKey: RSAPrivateKey
-    private lateinit var publicKey: RSAPublicKey
-
     override lateinit var configuration: JwtConfiguration
         private set
 
     override fun initialize() {
-        val config = YamlConfigLoader().load("application.yaml")
-            ?: error("Failed to load application.yaml")
-        issuer = config.property("jwt.issuer").getString()
-        audience = config.property("jwt.audience").getString()
-        realm = config.property("jwt.realm").getString()
-
-        privateKey = loadPrivateKey("keys/private_key.pem")
-        publicKey = loadPublicKey("keys/public_key.pem")
-
+        val config = YamlConfigLoader().load("application.yaml") ?: run {
+            error("Failed to load application.yaml")
+        }
         configuration = JwtConfiguration(
-            issuer = issuer,
-            audience = audience,
-            realm = realm,
-            publicKey = publicKey
+            issuer = config.property("jwt.issuer").getString(),
+            audience = config.property("jwt.audience").getString(),
+            realm = config.property("jwt.realm").getString(),
+            publicKey = loadPublicKey()
         )
+        privateKey = loadPrivateKey()
     }
 
     override fun generate(id: String): String {
         return JWT.create()
-            .withAudience(audience)
-            .withIssuer(issuer)
+            .withAudience(configuration.audience)
+            .withIssuer(configuration.issuer)
             .withClaim("userId", id)
             .withExpiresAt(Date(System.currentTimeMillis() + EXPIRES_IN))
-            .sign(Algorithm.RSA256(publicKey, privateKey))
+            .sign(Algorithm.RSA256(configuration.publicKey, privateKey))
     }
 
-    private fun loadPrivateKey(path: String): RSAPrivateKey {
-        val keyContent = File(path).readText()
-            .replace("-----BEGIN PRIVATE KEY-----", "")
-            .replace("-----END PRIVATE KEY-----", "")
-            .replace("\\s".toRegex(), "")
-
-        val decoded = Base64.getDecoder().decode(keyContent)
+    private fun loadPrivateKey(): RSAPrivateKey {
+        val decoded = extractKeyContent("keys/private_key.pem")
         val keySpec = PKCS8EncodedKeySpec(decoded)
         val keyFactory = KeyFactory.getInstance("RSA")
         return keyFactory.generatePrivate(keySpec) as RSAPrivateKey
     }
 
-    private fun loadPublicKey(path: String): RSAPublicKey {
-        val keyContent = File(path).readText()
-            .replace("-----BEGIN PUBLIC KEY-----", "")
-            .replace("-----END PUBLIC KEY-----", "")
-            .replace("\\s".toRegex(), "")
-
-        val decoded = Base64.getDecoder().decode(keyContent)
+    private fun loadPublicKey(): RSAPublicKey {
+        val decoded = extractKeyContent("keys/public_key.pem")
         val keySpec = X509EncodedKeySpec(decoded)
         val keyFactory = KeyFactory.getInstance("RSA")
         return keyFactory.generatePublic(keySpec) as RSAPublicKey
     }
 
+    private fun extractKeyContent(path: String): ByteArray {
+        return File(path)
+            .readText()
+            .replace("\\s".toRegex(), "")
+            .let(Base64.getDecoder()::decode)
+    }
+
     companion object {
-        private const val EXPIRES_IN = 3600000L // 1 hour in milliseconds
+        private const val EXPIRES_IN = 3_600_000L
     }
 }
