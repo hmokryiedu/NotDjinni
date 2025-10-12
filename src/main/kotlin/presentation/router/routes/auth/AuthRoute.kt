@@ -5,15 +5,20 @@ import io.ktor.server.request.*
 import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.Routing
+import not.djinni.auth.TokenProvider
 import not.djinni.domain.repository.AuthRepository
 import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.auth.request.LoginRequest
 import not.djinni.presentation.router.routes.auth.request.RegisterRequest
 import not.djinni.presentation.router.routes.auth.resources.Auth
+import not.djinni.presentation.router.routes.auth.response.TokenResponse
 import org.koin.core.annotation.Single
 
 @Single
-class AuthRoute(private val authRepository: AuthRepository) : Route {
+class AuthRoute(
+    private val authRepository: AuthRepository,
+    private val tokenProvider: TokenProvider
+) : Route {
 
     override fun install(root: Routing) = with(root) {
         login()
@@ -25,7 +30,10 @@ class AuthRoute(private val authRepository: AuthRepository) : Route {
             val loginRequest = call.receive<LoginRequest>()
             authRepository
                 .login(loginRequest.email, loginRequest.password)
-                .onSuccess { call.respondText("Successfully logged in", status = HttpStatusCode.OK) }
+                .onSuccess { userId ->
+                    val token = tokenProvider.generate(userId.toString())
+                    call.respond(HttpStatusCode.OK, TokenResponse(token))
+                }
                 .onFailure { call.respondText(it.message.orEmpty(), status = HttpStatusCode.NotFound) }
         }
     }
@@ -35,7 +43,10 @@ class AuthRoute(private val authRepository: AuthRepository) : Route {
             val registerRequest = call.receive<RegisterRequest>()
             authRepository
                 .register(registerRequest.email, registerRequest.password)
-                .onSuccess { call.respondText("Successfully registered", status = HttpStatusCode.OK) }
+                .onSuccess { userId ->
+                    val token = tokenProvider.generate(userId.toString())
+                    call.respond(HttpStatusCode.OK, TokenResponse(token))
+                }
                 .onFailure { call.respondText(it.message.orEmpty(), status = HttpStatusCode.NotFound) }
         }
     }
