@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.config.yaml.YamlConfigLoader
 import not.djinni.auth.model.JwtConfiguration
+import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import org.koin.core.annotation.Single
 import java.io.File
 import java.security.KeyFactory
@@ -34,11 +35,11 @@ class DefaultTokenProvider : TokenProvider {
         privateKey = loadPrivateKey()
     }
 
-    override fun generate(id: String): String {
+    override fun generate(id: Long): String {
         return JWT.create()
             .withAudience(configuration.audience)
             .withIssuer(configuration.issuer)
-            .withClaim("userId", id)
+            .withClaim(JwtAuth.USER_ID_CLAIM_NAME, id)
             .withExpiresAt(Date(System.currentTimeMillis() + EXPIRES_IN))
             .sign(Algorithm.RSA256(configuration.publicKey, privateKey))
     }

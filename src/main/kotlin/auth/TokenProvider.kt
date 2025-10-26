@@ -6,5 +6,5 @@ interface TokenProvider {
     val configuration: JwtConfiguration
 
     fun initialize()
-    fun generate(id: String): String
+    fun generate(id: Long): String
 }

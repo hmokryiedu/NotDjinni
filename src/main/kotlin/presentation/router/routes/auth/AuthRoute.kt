@@ -6,12 +6,14 @@ import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.Routing
 import not.djinni.auth.TokenProvider
+import not.djinni.domain.exception.auth.AuthException
 import not.djinni.domain.repository.AuthRepository
 import not.djinni.presentation.router.routes.Route
+import not.djinni.presentation.router.routes.auth.mapper.toStatusCode
 import not.djinni.presentation.router.routes.auth.request.LoginRequest
-import not.djinni.presentation.router.routes.auth.request.RegisterRequest
 import not.djinni.presentation.router.routes.auth.resources.Auth
 import not.djinni.presentation.router.routes.auth.response.TokenResponse
+import not.djinni.presentation.router.routes.common.mapper.toErrorResult
 import org.koin.core.annotation.Single
 
 @Single
@@ -31,23 +33,29 @@ class AuthRoute(
             authRepository
                 .login(loginRequest.email, loginRequest.password)
                 .onSuccess { userId ->
-                    val token = tokenProvider.generate(userId.toString())
+                    val token = tokenProvider.generate(userId)
                     call.respond(HttpStatusCode.OK, TokenResponse(token))
                 }
-                .onFailure { call.respondText(it.message.orEmpty(), status = HttpStatusCode.NotFound) }
+                .onFailure {
+                    val errorResult = it.toErrorResult(AuthException::toStatusCode)
+                    call.respond(status = errorResult.code, message = errorResult.model)
+                }
         }
     }
 
     private fun Routing.register() {
         post<Auth.Register> {
-            val registerRequest = call.receive<RegisterRequest>()
+            val registerRequest = call.receive<LoginRequest>()
             authRepository
                 .register(registerRequest.email, registerRequest.password)
                 .onSuccess { userId ->
-                    val token = tokenProvider.generate(userId.toString())
+                    val token = tokenProvider.generate(userId)
                     call.respond(HttpStatusCode.OK, TokenResponse(token))
                 }
-                .onFailure { call.respondText(it.message.orEmpty(), status = HttpStatusCode.NotFound) }
+                .onFailure {
+                    val errorResult = it.toErrorResult(AuthException::toStatusCode)
+                    call.respond(status = errorResult.code, message = errorResult.model)
+                }
         }
     }
 }

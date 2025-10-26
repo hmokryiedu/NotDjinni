@@ -8,6 +8,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import not.djinni.auth.TokenProvider
+import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import org.koin.ktor.ext.inject
 
 fun Application.installAuthentication() {
@@ -17,7 +18,7 @@ fun Application.installAuthentication() {
     val config = tokenProvider.configuration
 
     install(Authentication) {
-        jwt("auth-jwt") {
+        jwt(JwtAuth.NAME) {
             realm = config.realm
             verifier(
                 JWT
@@ -28,7 +29,7 @@ fun Application.installAuthentication() {
             )
 
             validate { credential ->
-                if (credential.payload.getClaim("userId").asString().isNotEmpty()) {
+                if (credential.payload.getClaim(JwtAuth.USER_ID_CLAIM_NAME).asLong() != null) {
                     JWTPrincipal(credential.payload)
                 } else {
                     null

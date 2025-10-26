@@ -4,8 +4,9 @@ ktor:
       - not.djinni.ApplicationKt.module
   deployment:
     port: 8080
+    host: "192.168.31.155"
 
 jwt:
-  issuer: "http://0.0.0.0:8080"
-  audience: "http://0.0.0.0:8080"
+  issuer: "http://192.168.31.155:8080"
+  audience: "http://192.168.31.155:8080"
   realm: "NotDjinni API"
