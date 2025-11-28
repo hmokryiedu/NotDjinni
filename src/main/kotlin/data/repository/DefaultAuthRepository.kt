@@ -1,5 +1,6 @@
 package not.djinni.data.repository
 
+import not.djinni.data.mapper.toDomain
 import not.djinni.database.api.user.UserDao
 import not.djinni.database.api.user.UserEntity
 import not.djinni.domain.repository.AuthRepository
@@ -15,13 +16,15 @@ class DefaultAuthRepository(private val userDao: UserDao) : AuthRepository {
     override suspend fun login(email: String, password: String) = runCatching {
         val user = userDao.getUserByEmail(email) ?: throw AuthException.UserNotFound()
         if (user.password != password.hash()) throw AuthException.InvalidCredentials()
-        return@runCatching user.id
+        return@runCatching user.toDomain()
     }
 
     override suspend fun register(email: String, password: String) = runCatching {
         if (userDao.getUserByEmail(email = email) != null) throw AuthException.EmailAlreadyInUse()
         if (!passwordRegex.matches(password)) throw AuthException.WeakPassword()
-        return@runCatching userDao.upsertUser(UserEntity(email = email, password = password.hash()))
+        return@runCatching UserEntity(email = email, password = password.hash())
+            .also { userDao.upsertUser(it) }
+            .toDomain()
     }
 
     private fun String.hash(): String = MessageDigest.getInstance("SHA-256").digest(this.toByteArray()).toHexString()

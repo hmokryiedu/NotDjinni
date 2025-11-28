@@ -6,7 +6,7 @@ import not.djinni.model.User
 fun UserEntity.toDomain(): User {
     return User(
         id = id,
+        name = name,
         email = email,
-        password = password,
     )
 }

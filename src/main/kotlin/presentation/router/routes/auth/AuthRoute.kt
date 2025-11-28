@@ -18,8 +18,8 @@ import org.koin.core.annotation.Single
 
 @Single
 class AuthRoute(
+    private val tokenProvider: TokenProvider,
     private val authRepository: AuthRepository,
-    private val tokenProvider: TokenProvider
 ) : Route {
 
     override fun install(root: Routing) = with(root) {
@@ -32,8 +32,8 @@ class AuthRoute(
             val loginRequest = call.receive<LoginRequest>()
             authRepository
                 .login(loginRequest.email, loginRequest.password)
-                .onSuccess { userId ->
-                    val token = tokenProvider.generate(userId)
+                .onSuccess { user ->
+                    val token = tokenProvider.generate(user.id)
                     call.respond(HttpStatusCode.OK, TokenResponse(token))
                 }
                 .onFailure {
@@ -48,8 +48,8 @@ class AuthRoute(
             val registerRequest = call.receive<LoginRequest>()
             authRepository
                 .register(registerRequest.email, registerRequest.password)
-                .onSuccess { userId ->
-                    val token = tokenProvider.generate(userId)
+                .onSuccess { user ->
+                    val token = tokenProvider.generate(user.id)
                     call.respond(HttpStatusCode.OK, TokenResponse(token))
                 }
                 .onFailure {

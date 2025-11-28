@@ -1,0 +1,71 @@
+@startuml NotDjinni Use Case Diagram
+
+skinparam usecase {
+    BackgroundColor WhiteSmoke
+    BorderColor Gray
+    FontSize 12
+}
+
+skinparam actor {
+    BackgroundColor LightBlue
+    BorderColor Blue
+    FontSize 14
+}
+
+' Actors
+actor "Job Seeker" as JobSeeker
+actor "Employer" as Employer
+
+' Authentication
+usecase "Register User" as Register
+usecase "Login" as Login
+usecase "Logout" as Logout
+
+' Job Seeker use cases
+usecase "Create Job Seeker\nProfile" as CreateJS
+usecase "Edit Job Seeker\nProfile" as EditJS
+usecase "Search Vacancies" as Search
+usecase "View Recommended\nVacancies" as Recommended
+usecase "Apply for Vacancy" as Apply
+usecase "View My Applications" as ViewMyApps
+
+' Employer use cases  
+usecase "Create Employer\nProfile" as CreateEmp
+usecase "Edit Employer\nProfile" as EditEmp
+usecase "Post Vacancy" as Post
+usecase "Manage Vacancy" as Manage
+usecase "View Applications" as ViewApps
+usecase "Review Candidate\nProfile" as Review
+usecase "Update Application\nStatus" as UpdateStatus
+
+' Job Seeker connections
+JobSeeker -- Register
+JobSeeker -- Login
+JobSeeker -- Logout
+JobSeeker -- CreateJS
+JobSeeker -- EditJS
+JobSeeker -- Search
+JobSeeker -- Recommended
+JobSeeker -- Apply
+JobSeeker -- ViewMyApps
+
+' Employer connections
+Employer -- Register
+Employer -- Login
+Employer -- Logout
+Employer -- CreateEmp
+Employer -- EditEmp
+Employer -- Post
+Employer -- Manage
+Employer -- ViewApps
+Employer -- Review
+Employer -- UpdateStatus
+
+' Relationships
+CreateJS .> Register : <<include>>
+CreateEmp .> Register : <<include>>
+Post .> Login : <<include>>
+Apply .> Login : <<include>>
+UpdateStatus ..> Review : <<extend>>
+
+@enduml
