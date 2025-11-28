@@ -8,6 +8,8 @@ import not.djinni.presentation.router.common.response.user.UserResponse
 data class AuthResponse(
     @SerialName("user")
     val user: UserResponse,
-    @SerialName("token")
-    val token: String
+    @SerialName("access_token")
+    val accessToken: String,
+    @SerialName("refresh_token")
+    val refreshToken: String
 )

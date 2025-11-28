@@ -8,4 +8,7 @@ fun AuthException.toStatusCode(): HttpStatusCode = when (this) {
     is AuthException.InvalidCredentials -> HttpStatusCode.Unauthorized
     is AuthException.UserNotFound -> HttpStatusCode.NotFound
     is AuthException.WeakPassword -> HttpStatusCode.UnprocessableEntity
+    is AuthException.InvalidName -> HttpStatusCode.BadRequest
+    is AuthException.InvalidRefreshToken -> HttpStatusCode.Unauthorized
+    is AuthException.RefreshTokenExpired -> HttpStatusCode.Unauthorized
 }

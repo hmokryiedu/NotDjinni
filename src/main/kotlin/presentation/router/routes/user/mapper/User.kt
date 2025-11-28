@@ -6,6 +6,7 @@ import not.djinni.presentation.router.common.response.user.UserResponse
 fun User.toResponse(): UserResponse {
     return UserResponse(
         id = id,
+        name = name,
         email = email,
     )
 }

@@ -14,6 +14,7 @@ class DefaultUserDao : UserDao {
 
     override suspend fun upsertUser(user: UserEntity): Long = runQuery {
         UserTableEntity.new {
+            this.name = user.name
             this.email = user.email
             this.password = user.password
         }.id.value
