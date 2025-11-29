@@ -1,10 +1,19 @@
 package not.djinni.data.mapper
 
 import not.djinni.database.api.seeker.SeekerProfileEntity
+import not.djinni.database.api.seeker.WorkExperienceEntity
 import not.djinni.model.role.SeekerProfile
 import not.djinni.model.role.WorkExperience
 
-fun SeekerProfileEntity.toDomain(workExperiences: List<WorkExperience> = emptyList()): SeekerProfile {
+fun Pair<SeekerProfileEntity, List<WorkExperienceEntity>>.toDomain(
+): SeekerProfile {
+    val experiences = second.map(WorkExperienceEntity::toDomain)
+    return first.toDomain(experiences)
+}
+
+fun SeekerProfileEntity.toDomain(
+    workExperiences: List<WorkExperience> = emptyList()
+): SeekerProfile {
     return SeekerProfile(
         id = id,
         speciality = specialty,

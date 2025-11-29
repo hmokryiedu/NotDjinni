@@ -1,14 +1,14 @@
 package not.djinni.model.role
 
-import java.time.LocalDate
+import kotlinx.datetime.Instant
 
 data class WorkExperience(
     val id: Long,
     val companyName: String,
     val position: String,
     val description: String?,
-    val startDate: LocalDate,
-    val endDate: LocalDate?
+    val startDate: Instant,
+    val endDate: Instant?
 ) {
     val isCurrent: Boolean
         get() = endDate == null

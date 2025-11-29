@@ -1,6 +1,6 @@
 package not.djinni.database.api.seeker
 
-import java.time.LocalDate
+import kotlinx.datetime.Instant
 
 data class WorkExperienceEntity(
     val id: Long = 0,
@@ -8,6 +8,6 @@ data class WorkExperienceEntity(
     val companyName: String,
     val position: String,
     val description: String?,
-    val startDate: LocalDate,
-    val endDate: LocalDate?
+    val startDate: Instant,
+    val endDate: Instant?
 )

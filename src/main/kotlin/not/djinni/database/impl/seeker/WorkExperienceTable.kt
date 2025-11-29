@@ -5,15 +5,15 @@ import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.LongIdTable
-import org.jetbrains.exposed.sql.javatime.date
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 
 object WorkExperienceTable : LongIdTable("work_experience", "id") {
     val profileId = reference("profile_id", SeekerProfileTable)
     val companyName = varchar("company_name", 255)
     val position = varchar("position", 255)
     val description = text("description").nullable()
-    val startDate = date("start_date")
-    val endDate = date("end_date").nullable()
+    val startDate = timestamp("start_date")
+    val endDate = timestamp("end_date").nullable()
 }
 
 class WorkExperienceTableEntity(id: EntityID<Long>) : LongEntity(id) {

@@ -23,6 +23,8 @@ class SeekerProfileTableEntity(id: EntityID<Long>) : LongEntity(id) {
     var experienceYears by SeekerProfileTable.experienceYears
     var desiredSalary by SeekerProfileTable.desiredSalary
     var aboutMe by SeekerProfileTable.aboutMe
+
+    val workExperiences by WorkExperienceTableEntity referrersOn WorkExperienceTable.profileId
 }
 
 fun SeekerProfileTableEntity.toEntity() = SeekerProfileEntity(
