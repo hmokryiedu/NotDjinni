@@ -2,6 +2,8 @@ package not.djinni.database
 
 import kotlinx.coroutines.Dispatchers
 import not.djinni.database.impl.token.RefreshTokenTable
+import not.djinni.database.impl.seeker.SeekerProfileTable
+import not.djinni.database.impl.seeker.WorkExperienceTable
 import not.djinni.database.impl.user.UserTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -23,7 +25,7 @@ object NotDjinniDatabase {
 
     fun init() {
         transaction(database) {
-            SchemaUtils.create(UserTable, RefreshTokenTable)
+            SchemaUtils.create(UserTable, RefreshTokenTable, SeekerProfileTable, WorkExperienceTable)
             addLogger(StdOutSqlLogger)
         }
     }

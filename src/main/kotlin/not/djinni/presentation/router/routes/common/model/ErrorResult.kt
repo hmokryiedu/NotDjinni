@@ -10,9 +10,7 @@ data class ErrorResult(
     companion object {
         val Default = ErrorResult(
             code = HttpStatusCode.InternalServerError,
-            model = ErrorResponse(
-                message = "An unexpected error occurred."
-            )
+            model = ErrorResponse(message = "An unexpected error occurred.")
         )
     }
 }

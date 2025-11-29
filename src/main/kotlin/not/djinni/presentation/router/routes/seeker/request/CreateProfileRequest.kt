@@ -1,0 +1,18 @@
+package not.djinni.presentation.router.routes.seeker.request
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class CreateProfileRequest(
+    @SerialName("speciality")
+    val specialty: String,
+    @SerialName("experience_years")
+    val experienceYears: Int,
+    @SerialName("desired_salary")
+    val desiredSalary: Int,
+    @SerialName("about_me")
+    val aboutMe: String?,
+    @SerialName("work_experience")
+    val workExperience: List<WorkExperienceRequest> = emptyList()
+)
