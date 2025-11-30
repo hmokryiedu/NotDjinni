@@ -7,6 +7,7 @@ import not.djinni.presentation.router.routes.seeker.SeekerRoute
 import not.djinni.presentation.router.routes.user.UserRoute
 import not.djinni.presentation.router.routes.company.CompanyRoute
 import not.djinni.presentation.router.routes.employer.EmployerRoute
+import not.djinni.presentation.router.routes.vacancy.VacancyRoute
 import org.koin.core.annotation.Single
 
 @Single([Router::class])
@@ -15,7 +16,8 @@ class DefaultRouter(
     private val userRoute: UserRoute,
     private val seekerRoute: SeekerRoute,
     private val companyRoute: CompanyRoute,
-    private val employerRoute: EmployerRoute
+    private val employerRoute: EmployerRoute,
+    private val vacancyRoute: VacancyRoute
 ) : Router {
 
     override fun install(application: Application) {
@@ -25,6 +27,7 @@ class DefaultRouter(
             seekerRoute.install(this)
             companyRoute.install(this)
             employerRoute.install(this)
+            vacancyRoute.install(this)
         }
     }
 }
