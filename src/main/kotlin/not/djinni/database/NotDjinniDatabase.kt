@@ -5,6 +5,8 @@ import not.djinni.database.impl.token.RefreshTokenTable
 import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.seeker.WorkExperienceTable
 import not.djinni.database.impl.user.UserTable
+import not.djinni.database.impl.employer.CompanyTable
+import not.djinni.database.impl.employer.EmployerProfileTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
@@ -25,7 +27,7 @@ object NotDjinniDatabase {
 
     fun init() {
         transaction(database) {
-            SchemaUtils.create(UserTable, RefreshTokenTable, SeekerProfileTable, WorkExperienceTable)
+            SchemaUtils.create(UserTable, RefreshTokenTable, SeekerProfileTable, WorkExperienceTable, CompanyTable, EmployerProfileTable)
             addLogger(StdOutSqlLogger)
         }
     }
