@@ -72,6 +72,25 @@ A REST API backend for a job marketplace platform connecting job seekers with em
 - **Authentication Required**: All operations protected by JWT
 - **Immutable Company Association**: Once created, employer cannot switch companies (only role is mutable)
 
+### 📢 Vacancy Management
+
+- **Job Postings**: Employers can create and manage job vacancies
+  - Vacancy linked to employer's company
+  - Title, description, salary range
+  - Employment type (full-time, part-time, contract, etc.)
+  - Job category (software dev, data science, DevOps, etc.)
+  - Experience requirements
+- **Vacancy Lifecycle**: Draft, active, paused, closed, expired status management
+- **Advanced Search & Filtering**:
+  - Filter by categories, employment types, statuses
+  - Salary range filtering
+  - Experience level filtering
+  - Text search in title and description
+  - Sorting by date, salary, experience
+- **Public Discovery**: Anyone can search and view active vacancies
+- **Authorization**: Only employers from the same company can modify/delete vacancies
+- **Employer Dashboard**: View all vacancies for your company
+
 ---
 
 ## 🔌 API Endpoints Reference
@@ -298,6 +317,116 @@ Content-Type: application/json
 
 ---
 
+### Vacancy Endpoints
+
+#### Public Endpoints (No Auth)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/vacancy` | No | List/search vacancies with filters |
+| `GET` | `/vacancy/{id}` | No | Get vacancy details with company info |
+| `GET` | `/vacancy/recent?limit=10` | No | Get recently posted vacancies |
+| `GET` | `/company/{id}/vacancies` | No | Get all vacancies for a company |
+
+#### Protected Endpoints (JWT + Employer Profile Required)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/vacancy` | JWT | Create vacancy (auto-linked to employer's company) |
+| `PUT` | `/vacancy/{id}` | JWT | Update vacancy (ownership check) |
+| `DELETE` | `/vacancy/{id}` | JWT | Delete vacancy (ownership check) |
+| `PUT` | `/vacancy/{id}/status` | JWT | Quick status update |
+| `GET` | `/employer/vacancies` | JWT | Get employer's company vacancies |
+
+**Example - Create Vacancy:**
+```json
+POST /vacancy
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "title": "Senior Backend Developer",
+  "description": "We are seeking an experienced backend developer...",
+  "salary_min": 80000,
+  "salary_max": 120000,
+  "min_experience_years": 5,
+  "employment_type": "FULL_TIME",
+  "category": "SOFTWARE_DEV",
+  "status": "ACTIVE"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "company_id": 1,
+  "title": "Senior Backend Developer",
+  "description": "We are seeking an experienced backend developer...",
+  "salary_min": 80000,
+  "salary_max": 120000,
+  "min_experience_years": 5,
+  "employment_type": "FULL_TIME",
+  "category": "SOFTWARE_DEV",
+  "status": "ACTIVE",
+  "created_at": "2025-01-15T10:30:00Z",
+  "updated_at": "2025-01-15T10:30:00Z"
+}
+```
+
+**Example - Search Vacancies with Filters:**
+```json
+GET /vacancy?category=SOFTWARE_DEV&category=DATA_SCIENCE&employment_type=FULL_TIME&salary_min=70000&search=backend&sort_by=salary_max&sort_direction=desc&limit=20&offset=0
+
+Response:
+[
+  {
+    "id": 1,
+    "company": {
+      "id": 1,
+      "company_name": "Tech Corp",
+      "website": "https://techcorp.com",
+      "description": "Leading technology company"
+    },
+    "title": "Senior Backend Developer",
+    "description": "We are seeking an experienced backend developer...",
+    "salary_min": 80000,
+    "salary_max": 120000,
+    "min_experience_years": 5,
+    "employment_type": "FULL_TIME",
+    "category": "SOFTWARE_DEV",
+    "status": "ACTIVE",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+]
+```
+
+**Available Enum Values:**
+
+Employment Types: `FULL_TIME`, `PART_TIME`, `CONTRACT`, `TEMPORARY`, `INTERNSHIP`, `FREELANCE`
+
+Job Categories: `SOFTWARE_DEV`, `DATA_SCIENCE`, `DEVOPS`, `QA`, `PRODUCT_MGMT`, `DESIGN`, `MARKETING`, `SALES`, `HR`, `FINANCE`, `OPERATIONS`, `SUPPORT`
+
+Vacancy Statuses: `DRAFT`, `ACTIVE`, `PAUSED`, `CLOSED`, `EXPIRED`
+
+**Filter Parameters:**
+- `category`: Job category (can be repeated for multiple values)
+- `status`: Vacancy status (can be repeated for multiple values)
+- `employment_type`: Employment type (can be repeated for multiple values)
+- `company_id`: Filter by specific company
+- `salary_min`: Minimum salary filter
+- `salary_max`: Maximum salary filter
+- `min_experience_years`: Minimum experience filter
+- `max_experience_years`: Maximum experience filter
+- `search`: Text search in title and description
+- `sort_by`: Sort field (`created_at`, `updated_at`, `salary_min`, `salary_max`, `title`, `min_experience`)
+- `sort_direction`: Sort direction (`asc`, `desc`)
+- `limit`: Page size (default: 20)
+- `offset`: Page offset (default: 0)
+
+---
+
 ## 📁 Project Structure
 
 NotDjinni follows **Clean Architecture** with a 4-layer separation of concerns:
@@ -482,8 +611,11 @@ The application uses the following main tables:
 - **work_experiences**: Work history for job seekers
 - **companies**: Company registry (public)
 - **employer_profiles**: Employer profiles linked to companies and users
+- **vacancies**: Job postings with employment type, category, and status (enums stored as VARCHAR)
 
 All tables use auto-incrementing `BIGSERIAL` IDs and appropriate foreign key constraints with CASCADE DELETE.
+
+**Vacancy Enums**: Employment types, job categories, and vacancy statuses are stored as enums in the application code and persisted as VARCHAR in the database for simplicity and type safety.
 
 ---
 
