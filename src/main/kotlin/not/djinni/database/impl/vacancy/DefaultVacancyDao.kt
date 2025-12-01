@@ -146,10 +146,9 @@ class DefaultVacancyDao : VacancyDao {
             if (employmentTypes.isNotEmpty()) andWhere { VacancyTable.employmentType inList employmentTypes }
             if (salaryMax != null) andWhere { VacancyTable.salaryMax lessEq salaryMax }
             if (salaryMin != null) andWhere { VacancyTable.salaryMin greaterEq salaryMin }
-            if (minExperienceYears != null) andWhere { VacancyTable.minExperienceYears greaterEq minExperienceYears }
-            if (maxExperienceYears != null) andWhere { VacancyTable.minExperienceYears lessEq maxExperienceYears }
+            if (experienceYears != null) andWhere { VacancyTable.minExperienceYears lessEq experienceYears }
             if (searchQuery != null) {
-                andWhere { (VacancyTable.title like "%$searchQuery%") or (VacancyTable.description like "%$searchQuery%") }
+                andWhere { (VacancyTable.title.lowerCase() like "%$searchQuery%") or (VacancyTable.description.lowerCase() like "%$searchQuery%") }
             }
             orderBy(sortColumn to sortOrder)
         }

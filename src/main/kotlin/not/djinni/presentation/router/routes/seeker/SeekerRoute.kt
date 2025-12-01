@@ -10,6 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import not.djinni.domain.exception.seeker.SeekerProfileException
 import not.djinni.domain.repository.SeekerProfileRepository
+import not.djinni.domain.usecase.vacancy.GetRecommendedVacanciesForSeekerUseCase
 import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
 import not.djinni.presentation.router.routes.Route
@@ -23,11 +24,13 @@ import not.djinni.presentation.router.routes.seeker.request.UpdateProfileRequest
 import not.djinni.presentation.router.routes.seeker.request.WorkExperienceRequest
 import not.djinni.presentation.router.routes.seeker.resources.Seeker
 import not.djinni.presentation.router.routes.seeker.response.WorkExperienceIdResponse
+import not.djinni.presentation.router.routes.vacancy.mapper.toResponseList
 import org.koin.core.annotation.Single
 
 @Single
 class SeekerRoute(
-    private val seekerProfileRepository: SeekerProfileRepository
+    private val seekerProfileRepository: SeekerProfileRepository,
+    private val getRecommendedVacanciesForSeekerUseCase: GetRecommendedVacanciesForSeekerUseCase,
 ) : Route {
 
     override fun install(root: Routing) = with(root) {
@@ -38,6 +41,24 @@ class SeekerRoute(
         addWorkExperience()
         updateWorkExperience()
         deleteWorkExperience()
+        getRecommendedVacancies()
+    }
+
+    private fun Routing.getRecommendedVacancies() {
+        authenticate(JwtAuth.NAME) {
+            get<Seeker.Vacancies> {
+                val params = call.request.queryParameters
+                val useCaseParams = GetRecommendedVacanciesForSeekerUseCase.Params(
+                    userId = getUserIdFromTokenOrSendError() ?: return@get,
+                    query = params["search"].orEmpty(),
+                    limit = params[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT,
+                    offset = params[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT,
+                )
+                getRecommendedVacanciesForSeekerUseCase(useCaseParams)
+                    .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                    .handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
+            }
+        }
     }
 
     private fun Routing.getProfile() {
@@ -128,5 +149,13 @@ class SeekerRoute(
                     .handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
             }
         }
+    }
+
+    private companion object {
+        const val LIMIT_PARAM = "limit"
+        const val OFFSET_PARAM = "offset"
+
+        const val LIMIT_DEFAULT = 20
+        const val OFFSET_DEFAULT = 0
     }
 }

@@ -12,4 +12,7 @@ class Seeker {
 
     @Resource("profile/experience/{id}")
     class ExperienceById(val parent: Seeker = Seeker(), val id: Long)
+
+    @Resource("vacancy")
+    class Vacancies(val parent: Seeker = Seeker())
 }

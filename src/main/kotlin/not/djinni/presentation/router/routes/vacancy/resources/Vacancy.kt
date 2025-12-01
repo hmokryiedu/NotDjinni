@@ -16,6 +16,3 @@ class Vacancy {
 
 @Resource("/company/{companyId}/vacancies")
 class CompanyVacancies(val companyId: Long)
-
-@Resource("/employer/vacancies")
-class EmployerVacancies

@@ -21,8 +21,7 @@ data class VacancyFilter(
     val employmentTypes: List<EmploymentTypeCode> = emptyList(),
     val salaryMin: Int? = null,
     val salaryMax: Int? = null,
-    val minExperienceYears: Int? = null,
-    val maxExperienceYears: Int? = null,
+    val experienceYears: Int? = null,
     val searchQuery: String? = null,
     val sortBy: VacancySortField = VacancySortField.CREATED_AT,
     val sortDirection: SortDirection = SortDirection.DESC

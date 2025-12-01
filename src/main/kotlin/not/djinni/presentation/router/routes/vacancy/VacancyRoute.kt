@@ -19,14 +19,8 @@ import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import not.djinni.presentation.router.routes.common.extension.getUserIdFromTokenOrSendError
 import not.djinni.presentation.router.routes.vacancy.mapper.*
-import not.djinni.presentation.router.routes.vacancy.request.CreateVacancyRequest
-import not.djinni.presentation.router.routes.vacancy.request.EmploymentTypeRequest
-import not.djinni.presentation.router.routes.vacancy.request.JobCategoryRequest
-import not.djinni.presentation.router.routes.vacancy.request.UpdateVacancyRequest
-import not.djinni.presentation.router.routes.vacancy.request.UpdateVacancyStatusRequest
-import not.djinni.presentation.router.routes.vacancy.request.VacancyStatusRequest
+import not.djinni.presentation.router.routes.vacancy.request.*
 import not.djinni.presentation.router.routes.vacancy.resources.CompanyVacancies
-import not.djinni.presentation.router.routes.vacancy.resources.EmployerVacancies
 import not.djinni.presentation.router.routes.vacancy.resources.Vacancy
 import org.koin.core.annotation.Single
 
@@ -44,7 +38,6 @@ class VacancyRoute(
         updateVacancy()
         deleteVacancy()
         updateVacancyStatus()
-        getEmployerVacancies()
     }
 
     private fun Routing.listVacancies() {
@@ -139,20 +132,6 @@ class VacancyRoute(
         }
     }
 
-    private fun Routing.getEmployerVacancies() {
-        authenticate(JwtAuth.NAME) {
-            get<EmployerVacancies> {
-                val userId = getUserIdFromTokenOrSendError() ?: return@get
-                val queryParams = call.request.queryParameters
-                val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
-                val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-                vacancyRepository.getEmployerVacancies(userId = userId, limit = limit, offset = offset)
-                    .onSuccess { vacancies -> call.respond(vacancies.map { it.toResponse() }) }
-                    .handleError(call = call, mapToCode = VacancyException::toStatusCode)
-            }
-        }
-    }
-
     private fun buildFilter(params: Parameters): VacancyFilter {
         val categories = params.getAllFilters(
             key = "category",
@@ -186,8 +165,7 @@ class VacancyRoute(
             companyId = params["company_id"]?.toLongOrNull(),
             salaryMin = params["salary_min"]?.toIntOrNull(),
             salaryMax = params["salary_max"]?.toIntOrNull(),
-            minExperienceYears = params["min_experience_years"]?.toIntOrNull(),
-            maxExperienceYears = params["max_experience_years"]?.toIntOrNull(),
+            experienceYears = params["experience_years"]?.toIntOrNull(),
         )
     }
 

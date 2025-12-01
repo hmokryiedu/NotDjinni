@@ -9,7 +9,9 @@ import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import not.djinni.domain.exception.employer.EmployerProfileException
+import not.djinni.domain.exception.vacancy.VacancyException
 import not.djinni.domain.repository.EmployerProfileRepository
+import not.djinni.domain.repository.VacancyRepository
 import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
 import not.djinni.presentation.router.routes.Route
@@ -21,11 +23,14 @@ import not.djinni.presentation.router.routes.employer.mapper.toStatusCode
 import not.djinni.presentation.router.routes.employer.request.CreateEmployerProfileRequest
 import not.djinni.presentation.router.routes.employer.request.UpdateEmployerProfileRequest
 import not.djinni.presentation.router.routes.employer.resources.Employer
+import not.djinni.presentation.router.routes.vacancy.mapper.toResponseList
+import not.djinni.presentation.router.routes.vacancy.mapper.toStatusCode
 import org.koin.core.annotation.Single
 
 @Single
 class EmployerRoute(
-    private val employerProfileRepository: EmployerProfileRepository
+    private val vacancyRepository: VacancyRepository,
+    private val employerProfileRepository: EmployerProfileRepository,
 ) : Route {
 
     override fun install(root: Routing) = with(root) {
@@ -33,6 +38,7 @@ class EmployerRoute(
         createProfile()
         updateProfile()
         deleteProfile()
+        getEmployerVacancies()
     }
 
     private fun Routing.getProfile() {
@@ -72,6 +78,20 @@ class EmployerRoute(
         }
     }
 
+    private fun Routing.getEmployerVacancies() {
+        authenticate(JwtAuth.NAME) {
+            get<Employer.Vacancies> {
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
+                val queryParams = call.request.queryParameters
+                val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
+                val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
+                vacancyRepository.getEmployerVacancies(userId = userId, limit = limit, offset = offset)
+                    .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                    .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+            }
+        }
+    }
+
     private fun Routing.deleteProfile() {
         authenticate(JwtAuth.NAME) {
             delete<Employer.Profile> {
@@ -81,5 +101,13 @@ class EmployerRoute(
                     .handleError(call = call, mapToCode = EmployerProfileException::toStatusCode)
             }
         }
+    }
+
+    private companion object {
+        const val LIMIT_PARAM = "limit"
+        const val OFFSET_PARAM = "offset"
+
+        const val LIMIT_DEFAULT = 20
+        const val OFFSET_DEFAULT = 0
     }
 }

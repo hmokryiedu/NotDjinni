@@ -3,6 +3,7 @@ package not.djinni.database.impl.employer
 import not.djinni.database.NotDjinniDatabase.runQuery
 import not.djinni.database.api.employer.CompanyDao
 import not.djinni.database.api.employer.CompanyEntity
+import org.jetbrains.exposed.sql.lowerCase
 import org.koin.core.annotation.Single
 
 @Single([CompanyDao::class])
@@ -31,7 +32,7 @@ class DefaultCompanyDao : CompanyDao {
     }
 
     override suspend fun searchCompaniesByName(name: String): List<CompanyEntity> = runQuery {
-        CompanyTableEntity.find { CompanyTable.companyName like "%$name%" }
+        CompanyTableEntity.find { CompanyTable.companyName.lowerCase() like "%$name%" }
             .map { it.toEntity() }
     }
 
