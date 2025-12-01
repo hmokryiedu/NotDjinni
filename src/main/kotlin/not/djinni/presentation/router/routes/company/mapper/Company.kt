@@ -3,6 +3,7 @@ package not.djinni.presentation.router.routes.company.mapper
 import not.djinni.model.role.Company
 import not.djinni.presentation.router.routes.company.request.CreateCompanyRequest
 import not.djinni.presentation.router.routes.company.request.UpdateCompanyRequest
+import not.djinni.presentation.router.routes.company.response.CompanyListResponse
 import not.djinni.presentation.router.routes.company.response.CompanyResponse
 
 fun CreateCompanyRequest.toDomain() = Company(
@@ -24,4 +25,8 @@ fun Company.toResponse() = CompanyResponse(
     companyName = companyName,
     website = website,
     description = description
+)
+
+fun List<Company>.toResponse() = CompanyListResponse(
+    companies = this.map { it.toResponse() }
 )

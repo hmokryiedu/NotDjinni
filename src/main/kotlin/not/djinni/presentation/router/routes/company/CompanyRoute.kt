@@ -37,9 +37,7 @@ class CompanyRoute(
     private fun Routing.getAllCompanies() {
         get<Company> {
             companyRepository.getAllCompanies()
-                .onSuccess { companies ->
-                    call.respond(companies.map { it.toResponse() })
-                }
+                .onSuccess { companies -> call.respond(companies.toResponse()) }
                 .handleError(call = call, mapToCode = CompanyException::toStatusCode)
         }
     }
@@ -55,9 +53,7 @@ class CompanyRoute(
     private fun Routing.searchCompanies() {
         get<Company.Search> { resource ->
             companyRepository.searchCompanies(resource.name)
-                .onSuccess { companies ->
-                    call.respond(companies.map { it.toResponse() })
-                }
+                .onSuccess { companies -> call.respond(companies.toResponse()) }
                 .handleError(call = call, mapToCode = CompanyException::toStatusCode)
         }
     }
@@ -66,9 +62,7 @@ class CompanyRoute(
         post<Company> {
             val request = call.receive<CreateCompanyRequest>()
             companyRepository.createCompany(request.toDomain())
-                .onSuccess {
-                    call.respond(status = HttpStatusCode.Created, message = it.toResponse())
-                }
+                .onSuccess { call.respond(status = HttpStatusCode.Created, message = it.toResponse()) }
                 .handleError(call = call, mapToCode = CompanyException::toStatusCode)
         }
     }
@@ -77,9 +71,7 @@ class CompanyRoute(
         put<Company.ById> { resource ->
             val request = call.receive<UpdateCompanyRequest>()
             companyRepository.updateCompany(request.toDomain(resource.id))
-                .onSuccess {
-                    call.respond("Company updated successfully".toMessageResponse())
-                }
+                .onSuccess { call.respond("Company updated successfully".toMessageResponse()) }
                 .handleError(call = call, mapToCode = CompanyException::toStatusCode)
         }
     }
@@ -87,9 +79,7 @@ class CompanyRoute(
     private fun Routing.deleteCompany() {
         delete<Company.ById> { resource ->
             companyRepository.deleteCompany(resource.id)
-                .onSuccess {
-                    call.respond("Company deleted successfully".toMessageResponse())
-                }
+                .onSuccess { call.respond("Company deleted successfully".toMessageResponse()) }
                 .handleError(call = call, mapToCode = CompanyException::toStatusCode)
         }
     }
