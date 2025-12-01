@@ -91,6 +91,20 @@ A REST API backend for a job marketplace platform connecting job seekers with em
 - **Authorization**: Only employers from the same company can modify/delete vacancies
 - **Employer Dashboard**: View all vacancies for your company
 
+### 📝 Job Applications
+
+- **Application Submission**: Job seekers can apply to vacancies with optional cover letters
+- **Application Tracking**: Complete application lifecycle management
+  - Status progression: Applied → Reviewing → Interview → Test Task → Offer → Hired
+  - Job seekers track all their applications
+  - Employers view all applications for their vacancies
+- **Duplicate Prevention**: Unique constraint prevents duplicate applications to the same vacancy
+- **Authorization Controls**:
+  - Job seekers: Full CRUD on their own applications
+  - Employers: View applications and update status for their company's vacancies
+- **Application Statuses**: APPLIED, REVIEWING, INTERVIEW, TEST_TASK, OFFER, HIRED, REJECTED, WITHDRAWN
+- **Cascade Deletion**: Applications automatically deleted when vacancy or seeker profile is removed
+
 ---
 
 ## 🔌 API Endpoints Reference
@@ -427,6 +441,171 @@ Vacancy Statuses: `DRAFT`, `ACTIVE`, `PAUSED`, `CLOSED`, `EXPIRED`
 
 ---
 
+### Application Endpoints (JWT Auth Required)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/application` | JWT | Create job application (Job Seeker) |
+| `GET` | `/application` | JWT | List my applications (Job Seeker) |
+| `GET` | `/application/{id}` | JWT | Get application details (Owner or Employer) |
+| `PUT` | `/application/{id}` | JWT | Update application (Job Seeker owner only) |
+| `DELETE` | `/application/{id}` | JWT | Delete application (Job Seeker owner only) |
+| `PUT` | `/application/{id}/status` | JWT | Update application status (Employer only) |
+| `GET` | `/application/vacancy/{vacancyId}` | JWT | List applications for vacancy (Employer only) |
+
+**Example - Create Application:**
+```json
+POST /application
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "vacancy_id": 1,
+  "cover_letter": "I am very interested in this position because..."
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "vacancy_id": 1,
+  "job_seeker_id": 5,
+  "status": "APPLIED",
+  "cover_letter": "I am very interested in this position because...",
+  "created_at": "2025-01-20T14:30:00Z",
+  "updated_at": "2025-01-20T14:30:00Z"
+}
+```
+
+**Example - Get My Applications:**
+```json
+GET /application?status=APPLIED&sort_by=created_at&sort_direction=desc&limit=20&offset=0
+Authorization: Bearer <jwt-token>
+
+Response:
+[
+  {
+    "id": 1,
+    "vacancy_id": 1,
+    "job_seeker_id": 5,
+    "status": "APPLIED",
+    "cover_letter": "I am very interested in this position because...",
+    "created_at": "2025-01-20T14:30:00Z",
+    "updated_at": "2025-01-20T14:30:00Z"
+  }
+]
+```
+
+**Example - Get Application Details:**
+```json
+GET /application/1
+Authorization: Bearer <jwt-token>
+
+Response:
+{
+  "id": 1,
+  "vacancy": {
+    "id": 1,
+    "company": {
+      "id": 1,
+      "company_name": "Tech Corp",
+      "website": "https://techcorp.com",
+      "description": "Leading technology company"
+    },
+    "title": "Senior Backend Developer",
+    "description": "We are seeking an experienced backend developer...",
+    "salary_min": 80000,
+    "salary_max": 120000,
+    "min_experience_years": 5,
+    "employment_type": "FULL_TIME",
+    "category": "SOFTWARE_DEV",
+    "status": "ACTIVE",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  },
+  "job_seeker": {
+    "id": 5,
+    "specialty": "Full Stack Developer",
+    "experience_years": 5,
+    "desired_salary": 120000,
+    "about_me": "Passionate developer with expertise in Kotlin...",
+    "work_experience": [...]
+  },
+  "status": "APPLIED",
+  "cover_letter": "I am very interested in this position because...",
+  "created_at": "2025-01-20T14:30:00Z",
+  "updated_at": "2025-01-20T14:30:00Z"
+}
+```
+
+**Example - Update Application (Job Seeker):**
+```json
+PUT /application/1
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "cover_letter": "Updated cover letter with more details..."
+}
+```
+
+**Example - Update Application Status (Employer):**
+```json
+PUT /application/1/status
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "status": "INTERVIEW"
+}
+```
+
+**Example - Get Applications for Vacancy (Employer):**
+```json
+GET /application/vacancy/1?limit=20&offset=0
+Authorization: Bearer <jwt-token>
+
+Response:
+[
+  {
+    "id": 1,
+    "vacancy": {...},
+    "job_seeker": {...},
+    "status": "APPLIED",
+    "cover_letter": "...",
+    "created_at": "2025-01-20T14:30:00Z",
+    "updated_at": "2025-01-20T14:30:00Z"
+  }
+]
+```
+
+**Available Application Statuses:**
+- `APPLIED`: Initial application submitted
+- `REVIEWING`: Application under review
+- `INTERVIEW`: Candidate invited for interview
+- `TEST_TASK`: Technical test/task assigned
+- `OFFER`: Job offer extended
+- `HIRED`: Candidate hired
+- `REJECTED`: Application rejected
+- `WITHDRAWN`: Application withdrawn by candidate
+
+**Filter Parameters:**
+- `status`: Application status (single value)
+- `sort_by`: Sort field (`created_at`, `updated_at`)
+- `sort_direction`: Sort direction (`ASC`, `DESC`)
+- `limit`: Page size (default: 20)
+- `offset`: Page offset (default: 0)
+
+**Authorization Rules:**
+- **Job Seekers**: Can create, view, update, and delete their own applications
+- **Employers**: Can view applications for their company's vacancies and update application status
+- **Duplicate Prevention**: Unique constraint prevents applying to the same vacancy twice
+
+**Note**: When a vacancy or job seeker profile is deleted, all related applications are automatically deleted (CASCADE DELETE).
+
+---
+
 ## 📁 Project Structure
 
 NotDjinni follows **Clean Architecture** with a 4-layer separation of concerns:
@@ -612,10 +791,15 @@ The application uses the following main tables:
 - **companies**: Company registry (public)
 - **employer_profiles**: Employer profiles linked to companies and users
 - **vacancies**: Job postings with employment type, category, and status (enums stored as VARCHAR)
+- **applications**: Job applications linking seekers to vacancies with status tracking
 
 All tables use auto-incrementing `BIGSERIAL` IDs and appropriate foreign key constraints with CASCADE DELETE.
 
-**Vacancy Enums**: Employment types, job categories, and vacancy statuses are stored as enums in the application code and persisted as VARCHAR in the database for simplicity and type safety.
+**Application Enums**: Application statuses (APPLIED, REVIEWING, INTERVIEW, etc.) are stored as enums in the application code and persisted as VARCHAR in the database.
+
+**Unique Constraints**: The applications table has a unique constraint on `(vacancy_id, job_seeker_id)` to prevent duplicate applications.
+
+**Cascade Deletion**: Applications are automatically deleted when the associated vacancy or job seeker profile is deleted.
 
 ---
 

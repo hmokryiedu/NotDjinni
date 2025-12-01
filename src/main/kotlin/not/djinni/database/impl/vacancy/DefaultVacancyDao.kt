@@ -2,6 +2,7 @@ package not.djinni.database.impl.vacancy
 
 import kotlinx.datetime.Clock
 import not.djinni.database.NotDjinniDatabase.runQuery
+import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.vacancy.*
 import not.djinni.database.impl.employer.CompanyTable

@@ -8,7 +8,7 @@ import io.ktor.server.resources.post
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import not.djinni.database.api.vacancy.SortDirection
+import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.database.api.vacancy.VacancySortField
 import not.djinni.domain.exception.vacancy.VacancyException

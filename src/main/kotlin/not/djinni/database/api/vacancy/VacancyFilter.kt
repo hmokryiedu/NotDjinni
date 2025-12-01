@@ -1,5 +1,6 @@
 package not.djinni.database.api.vacancy
 
+import not.djinni.database.api.common.SortDirection
 import not.djinni.model.vacancy.EmploymentTypeCode
 import not.djinni.model.vacancy.JobCategoryCode
 import not.djinni.model.vacancy.VacancyStatusCode
@@ -11,11 +12,6 @@ enum class VacancySortField {
     SALARY_MAX,
     TITLE,
     MIN_EXPERIENCE
-}
-
-enum class SortDirection {
-    ASC,
-    DESC
 }
 
 data class VacancyFilter(
