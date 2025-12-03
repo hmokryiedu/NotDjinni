@@ -1,4 +1,4 @@
-package not.djinni.presentation.router.routes.vacancy.request
+package not.djinni.presentation.router.routes.common.request
 
 import kotlinx.serialization.Serializable
 

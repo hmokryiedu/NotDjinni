@@ -18,6 +18,7 @@ import not.djinni.presentation.router.extension.handleError
 import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import not.djinni.presentation.router.routes.common.extension.getUserIdFromTokenOrSendError
+import not.djinni.presentation.router.routes.common.request.JobCategoryRequest
 import not.djinni.presentation.router.routes.vacancy.mapper.*
 import not.djinni.presentation.router.routes.vacancy.request.*
 import not.djinni.presentation.router.routes.vacancy.resources.CompanyVacancies

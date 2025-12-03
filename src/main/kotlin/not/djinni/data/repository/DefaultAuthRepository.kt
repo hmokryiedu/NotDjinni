@@ -19,8 +19,8 @@ import kotlin.time.toDuration
 @Single([AuthRepository::class])
 class DefaultAuthRepository(
     private val userDao: UserDao,
+    private val tokenProvider: TokenProvider,
     private val refreshTokenDao: RefreshTokenDao,
-    private val tokenProvider: TokenProvider
 ) : AuthRepository {
 
     private val passwordRegex by lazy { PASSWORD_REGEX.toRegex() }
@@ -40,7 +40,7 @@ class DefaultAuthRepository(
 
     override suspend fun generateTokens(userId: Long): Result<AuthTokens> = runCatching {
         val accessToken = tokenProvider.generate(userId)
-        val refreshToken = UUID.randomUUID().toString()
+        val refreshToken = tokenProvider.generate(userId)
         val duration = REFRESH_TOKEN_VALIDITY_DAYS.toDuration(DurationUnit.DAYS)
         val expiresAt = Clock.System.now().plus(duration)
         val entity = RefreshTokenEntity(

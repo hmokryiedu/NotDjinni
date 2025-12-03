@@ -20,6 +20,7 @@ class DefaultSeekerProfileDao : SeekerProfileDao {
                 experienceYears = profile.experienceYears
                 desiredSalary = profile.desiredSalary
                 aboutMe = profile.aboutMe
+                jobCategory = profile.jobCategory
             }.id.value
         }
     }
@@ -42,6 +43,7 @@ class DefaultSeekerProfileDao : SeekerProfileDao {
                 experienceYears = profile.experienceYears
                 desiredSalary = profile.desiredSalary
                 aboutMe = profile.aboutMe
+                jobCategory = profile.jobCategory
             } != null
         }
     }

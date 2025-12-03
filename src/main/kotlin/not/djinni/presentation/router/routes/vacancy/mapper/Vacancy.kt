@@ -5,7 +5,7 @@ import not.djinni.model.vacancy.*
 import not.djinni.presentation.router.routes.company.mapper.toResponse
 import not.djinni.presentation.router.routes.vacancy.request.CreateVacancyRequest
 import not.djinni.presentation.router.routes.vacancy.request.EmploymentTypeRequest
-import not.djinni.presentation.router.routes.vacancy.request.JobCategoryRequest
+import not.djinni.presentation.router.routes.common.request.JobCategoryRequest
 import not.djinni.presentation.router.routes.vacancy.request.UpdateVacancyRequest
 import not.djinni.presentation.router.routes.vacancy.request.VacancyStatusRequest
 import not.djinni.presentation.router.routes.vacancy.response.VacancyDetailsResponse

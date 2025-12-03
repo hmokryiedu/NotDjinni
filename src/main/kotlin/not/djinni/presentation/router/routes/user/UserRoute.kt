@@ -10,6 +10,7 @@ import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import not.djinni.presentation.router.routes.common.auth.JwtAuth.USER_ID_CLAIM_NAME
 import not.djinni.presentation.router.routes.common.extension.getClaim
+import not.djinni.presentation.router.routes.common.extension.getUserIdFromTokenOrSendError
 import not.djinni.presentation.router.routes.common.mapper.toErrorResult
 import not.djinni.presentation.router.routes.user.mapper.toResponse
 import not.djinni.presentation.router.routes.user.mapper.toStatusCode
@@ -28,12 +29,7 @@ class UserRoute(
     private fun Routing.getUser() {
         authenticate(JwtAuth.NAME) {
             get<User> {
-                val userId = getClaim<Long>(USER_ID_CLAIM_NAME) ?: run {
-                    val exception = UserException.NotFound()
-                    val errorResult = exception.toErrorResult(UserException::toStatusCode)
-                    call.respond(status = errorResult.code, message = errorResult.model)
-                    return@get
-                }
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
                 userRepository.getUser(userId = userId)
                     .onSuccess { call.respond(it.toResponse()) }
                     .onFailure {

@@ -2,6 +2,7 @@ package not.djinni.presentation.router.routes.vacancy.request
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import not.djinni.presentation.router.routes.common.request.JobCategoryRequest
 
 @Serializable
 data class CreateVacancyRequest(

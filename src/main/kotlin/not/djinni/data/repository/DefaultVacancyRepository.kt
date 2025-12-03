@@ -29,7 +29,7 @@ class DefaultVacancyRepository(
             updatedAt = Clock.System.now()
         )
         val vacancyId = vacancyDao.createVacancy(finalVacancy.toEntity())
-        vacancyDao.getVacancy(vacancyId)?.toDomain() ?: run {
+        vacancyDao.getVacancyWithDetails(vacancyId)?.toDomain() ?: run {
             throw VacancyException.VacancyNotFound()
         }
     }

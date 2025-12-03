@@ -24,6 +24,7 @@ import not.djinni.presentation.router.routes.application.request.CreateApplicati
 import not.djinni.presentation.router.routes.application.request.UpdateApplicationRequest
 import not.djinni.presentation.router.routes.application.request.UpdateApplicationStatusRequest
 import not.djinni.presentation.router.routes.application.resources.Application
+import not.djinni.presentation.router.routes.application.response.HasAppliedResponse
 import org.koin.core.annotation.Single
 
 @Single
@@ -39,6 +40,7 @@ class ApplicationRoute(
         deleteApplication()
         updateApplicationStatus()
         getVacancyApplications()
+        hasApplied()
     }
 
     private fun Routing.createApplication() {
@@ -135,7 +137,6 @@ class ApplicationRoute(
                 val userId = getUserIdFromTokenOrSendError() ?: return@put
                 val request = call.receive<UpdateApplicationStatusRequest>()
                 val statusCode = request.status.toDomain()
-
                 applicationRepository.updateApplicationStatus(
                     userId = userId,
                     id = resource.id,
@@ -162,6 +163,17 @@ class ApplicationRoute(
                     offset = offset
                 )
                     .onSuccess { applications -> call.respond(applications.toResponse()) }
+                    .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
+            }
+        }
+    }
+
+    private fun Routing.hasApplied() {
+        authenticate(JwtAuth.NAME) {
+            get<Application.CheckByVacancy> { resource ->
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
+                applicationRepository.hasApplied(userId = userId, vacancyId = resource.vacancyId)
+                    .onSuccess { call.respond(HasAppliedResponse(hasApplied = it)) }
                     .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
             }
         }

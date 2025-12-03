@@ -20,6 +20,7 @@ class GetRecommendedVacanciesForSeekerUseCase(
             searchQuery = params.query,
             salaryMin = seekerProfile.desiredSalary,
             experienceYears = seekerProfile.experienceYears,
+            categories = listOf(seekerProfile.jobCategory)
         )
         return vacancyRepository.getVacancies(filter = filter, limit = params.limit, offset = params.offset)
     }

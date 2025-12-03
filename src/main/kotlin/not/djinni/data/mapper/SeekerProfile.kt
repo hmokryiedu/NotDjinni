@@ -20,6 +20,7 @@ fun SeekerProfileEntity.toDomain(
         experienceYears = experienceYears,
         desiredSalary = desiredSalary,
         aboutMe = aboutMe,
+        jobCategory = jobCategory,
         workExperience = workExperiences
     )
 }
@@ -31,6 +32,7 @@ fun SeekerProfile.toEntity(userId: Long): SeekerProfileEntity {
         specialty = speciality,
         experienceYears = experienceYears,
         desiredSalary = desiredSalary,
-        aboutMe = aboutMe
+        aboutMe = aboutMe,
+        jobCategory = jobCategory
     )
 }

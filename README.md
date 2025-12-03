@@ -50,6 +50,7 @@ A REST API backend for a job marketplace platform connecting job seekers with em
   - Years of experience
   - Desired salary
   - About me section
+  - Job category (software dev, data science, DevOps, etc.)
 - **Work Experience**: Complete work history management
   - Company name, position, description
   - Start/end dates with current job support
@@ -173,6 +174,7 @@ Content-Type: application/json
   "experience_years": 5,
   "desired_salary": 120000,
   "about_me": "Passionate developer with expertise in Kotlin and modern web technologies",
+  "job_category": "SOFTWARE_DEV",
   "work_experience": [
     {
       "company_name": "Tech Corp",
@@ -200,6 +202,7 @@ Content-Type: application/json
   "experience_years": 5,
   "desired_salary": 120000,
   "about_me": "Passionate developer with expertise in Kotlin and modern web technologies",
+  "job_category": "SOFTWARE_DEV",
   "work_experience": [
     {
       "id": 1,
@@ -452,6 +455,7 @@ Vacancy Statuses: `DRAFT`, `ACTIVE`, `PAUSED`, `CLOSED`, `EXPIRED`
 | `DELETE` | `/application/{id}` | JWT | Delete application (Job Seeker owner only) |
 | `PUT` | `/application/{id}/status` | JWT | Update application status (Employer only) |
 | `GET` | `/application/vacancy/{vacancyId}` | JWT | List applications for vacancy (Employer only) |
+| `GET` | `/application/check/vacancy/{vacancyId}` | JWT | Check if user has applied to vacancy |
 
 **Example - Create Application:**
 ```json
@@ -578,6 +582,17 @@ Response:
     "updated_at": "2025-01-20T14:30:00Z"
   }
 ]
+```
+
+**Example - Check if Applied to Vacancy (Job Seeker):**
+```json
+GET /application/check/vacancy/1
+Authorization: Bearer <jwt-token>
+
+Response:
+{
+  "has_applied": true
+}
 ```
 
 **Available Application Statuses:**

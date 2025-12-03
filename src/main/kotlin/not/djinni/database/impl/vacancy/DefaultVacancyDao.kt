@@ -101,11 +101,17 @@ class DefaultVacancyDao : VacancyDao {
         companyId: Long,
         limit: Int,
         offset: Int
-    ): List<VacancyEntity> = runQuery {
+    ): List<VacancyWithDetailsEntity> = runQuery {
+        val company = CompanyTableEntity.findById(companyId)?.toEntity() ?: return@runQuery emptyList()
         VacancyTableEntity.find { VacancyTable.companyId eq EntityID(companyId, CompanyTable) }
             .orderBy(VacancyTable.createdAt to SortOrder.DESC)
             .limit(limit, offset.toLong())
-            .map { it.toEntity() }
+            .map { vacancy ->
+                VacancyWithDetailsEntity(
+                    vacancy = vacancy.toEntity(),
+                    company = company
+                )
+            }
     }
 
     override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = runQuery {

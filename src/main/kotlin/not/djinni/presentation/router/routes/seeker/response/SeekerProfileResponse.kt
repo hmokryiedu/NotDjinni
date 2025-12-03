@@ -15,6 +15,8 @@ data class SeekerProfileResponse(
     val desiredSalary: Int,
     @SerialName("experience_years")
     val experienceYears: Int,
+    @SerialName("job_category")
+    val jobCategory: String,
     @SerialName("work_experience")
     val workExperience: List<WorkExperienceResponse>
 )

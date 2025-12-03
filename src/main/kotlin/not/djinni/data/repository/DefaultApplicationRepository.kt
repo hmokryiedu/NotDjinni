@@ -112,7 +112,11 @@ class DefaultApplicationRepository(
             throw ApplicationException.SeekerProfileNotFound()
         }
         val seekerFilter = filter.copy(jobSeekerId = seekerProfile.id)
-        applicationDao.getApplications(seekerFilter, limit, offset).map(ApplicationEntity::toDomain)
+        applicationDao.getApplications(
+            filter = seekerFilter,
+            limit = limit,
+            offset = offset
+        ).map(ApplicationEntity::toDomain)
     }
 
     override suspend fun getVacancyApplications(

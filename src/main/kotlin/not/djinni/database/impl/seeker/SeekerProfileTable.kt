@@ -2,6 +2,7 @@ package not.djinni.database.impl.seeker
 
 import not.djinni.database.api.seeker.SeekerProfileEntity
 import not.djinni.database.impl.user.UserTable
+import not.djinni.model.vacancy.JobCategoryCode
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -13,6 +14,7 @@ object SeekerProfileTable : LongIdTable("job_seeker_profiles", "id") {
     val experienceYears = integer("experience_years")
     val desiredSalary = integer("desired_salary")
     val aboutMe = text("about_me").nullable()
+    val jobCategory = enumeration<JobCategoryCode>("job_category")
 }
 
 class SeekerProfileTableEntity(id: EntityID<Long>) : LongEntity(id) {
@@ -23,6 +25,7 @@ class SeekerProfileTableEntity(id: EntityID<Long>) : LongEntity(id) {
     var experienceYears by SeekerProfileTable.experienceYears
     var desiredSalary by SeekerProfileTable.desiredSalary
     var aboutMe by SeekerProfileTable.aboutMe
+    var jobCategory by SeekerProfileTable.jobCategory
 
     val workExperiences by WorkExperienceTableEntity referrersOn WorkExperienceTable.profileId
 }
@@ -33,5 +36,6 @@ fun SeekerProfileTableEntity.toEntity() = SeekerProfileEntity(
     specialty = specialty,
     experienceYears = experienceYears,
     desiredSalary = desiredSalary,
-    aboutMe = aboutMe
+    aboutMe = aboutMe,
+    jobCategory = jobCategory
 )
