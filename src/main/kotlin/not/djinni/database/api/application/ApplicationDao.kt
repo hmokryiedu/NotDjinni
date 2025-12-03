@@ -14,7 +14,7 @@ interface ApplicationDao {
         filter: ApplicationFilter,
         limit: Int = 20,
         offset: Int = 0
-    ): List<ApplicationEntity>
+    ): List<ApplicationWithDetailsEntity>
     suspend fun countApplications(filter: ApplicationFilter): Int
     suspend fun hasApplied(vacancyId: Long, jobSeekerId: Long): Boolean
 }

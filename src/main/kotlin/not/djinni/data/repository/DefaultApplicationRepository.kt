@@ -4,7 +4,6 @@ import kotlinx.datetime.Clock
 import not.djinni.data.mapper.toDomain
 import not.djinni.data.mapper.toEntity
 import not.djinni.database.api.application.ApplicationDao
-import not.djinni.database.api.application.ApplicationEntity
 import not.djinni.database.api.application.ApplicationFilter
 import not.djinni.database.api.employer.EmployerProfileDao
 import not.djinni.database.api.seeker.SeekerProfileDao
@@ -116,7 +115,7 @@ class DefaultApplicationRepository(
             filter = seekerFilter,
             limit = limit,
             offset = offset
-        ).map(ApplicationEntity::toDomain)
+        ).map { it.toDomain() }
     }
 
     override suspend fun getVacancyApplications(
@@ -133,8 +132,7 @@ class DefaultApplicationRepository(
         }
         if (vacancy.companyId != employerProfile.company.id) throw ApplicationException.Unauthorized()
         val filter = ApplicationFilter(vacancyId = vacancyId)
-        val applications = applicationDao.getApplications(filter, limit, offset)
-        applications.mapNotNull { app -> applicationDao.getApplication(app.id)?.toDomain() }
+        applicationDao.getApplications(filter, limit, offset).map { it.toDomain() }
     }
 
     override suspend fun hasApplied(userId: Long, vacancyId: Long) = runCatching {

@@ -76,10 +76,29 @@ class DefaultApplicationDao : ApplicationDao {
         filter: ApplicationFilter,
         limit: Int,
         offset: Int
-    ): List<ApplicationEntity> = runQuery {
+    ): List<ApplicationWithDetailsEntity> = runQuery {
         filter.buildApplicationQuery()
             .limit(limit, offset.toLong())
-            .map { ApplicationTableEntity.wrapRow(it).toEntity() }
+            .mapNotNull { row ->
+                val app = ApplicationTableEntity.wrapRow(row)
+                val vacancy = VacancyTableEntity.findById(app.vacancyId.value) ?: return@mapNotNull null
+                val seeker = SeekerProfileTableEntity.findById(app.jobSeekerId.value) ?: return@mapNotNull null
+                val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: return@mapNotNull null
+
+                ApplicationWithDetailsEntity(
+                    application = app.toEntity(),
+                    jobSeeker = seeker.toEntity(),
+                    vacancy = not.djinni.database.api.vacancy.VacancyWithDetailsEntity(
+                        vacancy = vacancy.toEntity(),
+                        company = CompanyEntity(
+                            id = company.id.value,
+                            companyName = company.companyName,
+                            website = company.website,
+                            description = company.description
+                        )
+                    )
+                )
+            }
     }
 
     override suspend fun countApplications(filter: ApplicationFilter): Int = runQuery {

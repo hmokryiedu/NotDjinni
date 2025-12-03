@@ -491,8 +491,33 @@ Response:
 [
   {
     "id": 1,
-    "vacancy_id": 1,
-    "job_seeker_id": 5,
+    "vacancy": {
+      "id": 1,
+      "company": {
+        "id": 1,
+        "company_name": "Tech Corp",
+        "website": "https://techcorp.com",
+        "description": "Leading technology company"
+      },
+      "title": "Senior Backend Developer",
+      "description": "We are seeking an experienced backend developer...",
+      "salary_min": 80000,
+      "salary_max": 120000,
+      "min_experience_years": 5,
+      "employment_type": "FULL_TIME",
+      "category": "SOFTWARE_DEV",
+      "status": "ACTIVE",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    },
+    "job_seeker": {
+      "id": 5,
+      "specialty": "Full Stack Developer",
+      "experience_years": 5,
+      "desired_salary": 120000,
+      "about_me": "Passionate developer with expertise in Kotlin...",
+      "work_experience": [...]
+    },
     "status": "APPLIED",
     "cover_letter": "I am very interested in this position because...",
     "created_at": "2025-01-20T14:30:00Z",
