@@ -1,0 +1,136 @@
+@startuml Application Review Sequence
+
+skinparam participant {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam database {
+    BackgroundColor LightGreen
+    BorderColor DarkGreen
+}
+
+title NotDjinni - Application Status Update Sequence Diagram
+
+actor "Client\n(Employer)" as Client
+participant "ApplicationRoute" as AR
+participant "ApplicationRepository" as Repo
+participant "EmployerProfileDao" as EPDao
+participant "ApplicationDao" as ADao
+participant "VacancyDao" as VDao
+database "PostgreSQL" as DB
+
+== Authentication ==
+
+Client -> AR: PUT /application/{id}/status\n{status: "INTERVIEW"}\nAuthorization: Bearer <JWT>
+activate AR
+
+AR -> AR: Extract userId from JWT
+
+== Update Application Status ==
+
+AR -> Repo: updateApplicationStatus(userId, applicationId, statusCode)
+activate Repo
+
+== Get Employer's Company ==
+
+Repo -> EPDao: getProfileByUserId(userId)
+activate EPDao
+
+EPDao -> DB: SELECT * FROM employer_profiles\nWHERE user_id = ?
+activate DB
+DB --> EPDao: EmployerProfileEntity\n(companyId)
+deactivate DB
+
+EPDao --> Repo: EmployerProfileEntity
+deactivate EPDao
+
+note right of Repo
+  employerCompanyId = profile.companyId
+end note
+
+alt Employer profile not found
+    Repo --> AR: Result.failure(EmployerProfileNotFound)
+    AR --> Client: 404 Not Found\n{"error": "Employer profile not found"}
+end
+
+== Get Application ==
+
+Repo -> ADao: getApplication(applicationId)
+activate ADao
+
+ADao -> DB: SELECT * FROM applications\nWHERE id = ?
+activate DB
+DB --> ADao: ApplicationEntity\n(vacancyId)
+deactivate DB
+
+ADao --> Repo: ApplicationEntity
+deactivate ADao
+
+alt Application not found
+    Repo --> AR: Result.failure(ApplicationNotFound)
+    AR --> Client: 404 Not Found\n{"error": "Application not found"}
+end
+
+== Verify Authorization ==
+
+Repo -> VDao: getVacancy(application.vacancyId)
+activate VDao
+
+VDao -> DB: SELECT * FROM vacancies\nWHERE id = ?
+activate DB
+DB --> VDao: VacancyEntity\n(companyId)
+deactivate DB
+
+VDao --> Repo: VacancyEntity
+deactivate VDao
+
+Repo -> Repo: Verify authorization
+note right
+  Check: employerCompanyId == vacancy.companyId
+
+  Only employers from the SAME company
+  that posted the vacancy can update
+  application status
+end note
+
+alt Unauthorized
+    Repo --> AR: Result.failure(Unauthorized)
+    AR --> Client: 403 Forbidden\n{"error": "Not authorized to update\nthis application"}
+end
+
+== Update Status ==
+
+Repo -> ADao: updateStatus(applicationId, statusCode)
+activate ADao
+
+ADao -> DB: UPDATE applications\nSET status = ?, updated_at = NOW()\nWHERE id = ?
+activate DB
+DB --> ADao: 1 (row affected)
+deactivate DB
+
+ADao --> Repo: true
+deactivate ADao
+
+== Response ==
+
+Repo --> AR: Result.success(Unit)
+deactivate Repo
+
+AR --> Client: 200 OK\n{"message": "Application status updated"}
+deactivate AR
+
+== Alternative Statuses ==
+
+note over Client, DB
+  Available status transitions:
+
+  APPLIED -> REVIEWING -> INTERVIEW -> OFFER -> HIRED
+                      \-> TEST_TASK -/
+
+  Any state -> WITHDRAWN (by job seeker)
+  Any state -> REJECTED (by employer)
+end note
+
+@enduml

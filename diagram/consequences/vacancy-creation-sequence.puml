@@ -1,0 +1,111 @@
+@startuml Vacancy Creation Sequence
+
+skinparam participant {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam database {
+    BackgroundColor LightGreen
+    BorderColor DarkGreen
+}
+
+title NotDjinni - Vacancy Creation Sequence Diagram
+
+actor "Client\n(Employer)" as Client
+participant "VacancyRoute" as VR
+participant "VacancyRepository" as Repo
+participant "EmployerProfileDao" as EPDao
+participant "VacancyDao" as VDao
+participant "CompanyDao" as CDao
+database "PostgreSQL" as DB
+
+== Authentication ==
+
+Client -> VR: POST /vacancy\n{title, description, salary_min, salary_max, ...}\nAuthorization: Bearer <JWT>
+activate VR
+
+VR -> VR: Extract userId from JWT
+
+== Create Vacancy ==
+
+VR -> Repo: createVacancy(userId, Vacancy)
+activate Repo
+
+== Get Employer Profile (to get companyId) ==
+
+Repo -> EPDao: getProfileByUserId(userId)
+activate EPDao
+
+EPDao -> DB: SELECT * FROM employer_profiles\nWHERE user_id = ?
+activate DB
+DB --> EPDao: EmployerProfileEntity\n(id, userId, companyId, role)
+deactivate DB
+
+EPDao --> Repo: EmployerProfileEntity
+deactivate EPDao
+
+alt Employer profile not found
+    Repo --> VR: Result.failure(EmployerProfileNotFound)
+    VR --> Client: 404 Not Found\n{"error": "Employer profile not found.\nCreate employer profile first."}
+end
+
+note right of Repo
+  companyId is extracted from
+  employer's profile and auto-linked
+  to the vacancy (not from request)
+end note
+
+== Validate Vacancy Data ==
+
+Repo -> Repo: validateVacancy(vacancy)
+note right
+  - title not empty
+  - salary_min <= salary_max
+  - valid employment_type enum
+  - valid category enum
+  - valid status enum
+end note
+
+== Create Vacancy Record ==
+
+Repo -> VDao: createVacancy(VacancyEntity)
+activate VDao
+
+VDao -> DB: INSERT INTO vacancies\n(company_id, title, description,\nsalary_min, salary_max,\nmin_experience_years,\nemployment_type, category, status,\ncreated_at, updated_at)
+activate DB
+DB --> VDao: vacancy_id
+deactivate DB
+
+VDao --> Repo: vacancyId
+deactivate VDao
+
+== Get Company Details for Response ==
+
+Repo -> CDao: getCompany(companyId)
+activate CDao
+
+CDao -> DB: SELECT * FROM companies\nWHERE id = ?
+activate DB
+DB --> CDao: CompanyEntity
+deactivate DB
+
+CDao --> Repo: CompanyEntity
+deactivate CDao
+
+== Build Response ==
+
+Repo -> Repo: Build VacancyWithDetails\n(vacancy + company)
+
+Repo --> VR: Result.success(VacancyWithDetails)
+deactivate Repo
+
+== Response ==
+
+VR -> VR: Map to VacancyResponse
+
+VR --> Client: 201 Created\n{id, company, title, description,\nsalary_min, salary_max, status, ...}
+deactivate VR
+
+@enduml

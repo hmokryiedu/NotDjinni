@@ -1,0 +1,94 @@
+@startuml Employer Profile State Machine
+
+skinparam state {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Employer Profile State Diagram
+
+[*] --> NO_PROFILE : user registers
+
+state NO_PROFILE {
+    NO_PROFILE : User has no employer profile
+    NO_PROFILE : Cannot post vacancies
+    NO_PROFILE : Cannot review applications
+}
+
+state ACTIVE {
+    ACTIVE : Profile linked to company
+    ACTIVE : Can post vacancies
+    ACTIVE : Can review applications
+}
+
+state UPDATING {
+    UPDATING : Role being modified
+    UPDATING : Company ID is IMMUTABLE
+}
+
+state DELETED {
+    DELETED : Profile removed
+    DELETED : Vacancies remain with company
+}
+
+' Create profile flow
+NO_PROFILE --> ACTIVE : POST /employer/profile\n[createProfile(companyId, role)]
+
+' Update profile flow
+ACTIVE --> UPDATING : PUT /employer/profile\n[updateProfile(role)]
+UPDATING --> ACTIVE : save successful
+
+' Delete profile flow
+ACTIVE --> DELETED : DELETE /employer/profile\n[deleteProfile]
+DELETED --> [*]
+
+' Vacancy management within ACTIVE state
+state ACTIVE {
+    state "Vacancy Management" as VacMgmt {
+        [*] --> NoVacancies
+        NoVacancies --> HasVacancies : createVacancy
+        HasVacancies --> HasVacancies : create/update/delete
+        HasVacancies --> NoVacancies : delete all
+    }
+}
+
+note right of NO_PROFILE
+  Prerequisites:
+  1. User must be registered
+  2. Company must exist
+
+  Use POST /company to
+  create company first
+end note
+
+note right of ACTIVE
+  Profile fields:
+  - companyId (IMMUTABLE)
+  - role (mutable)
+
+  Permissions:
+  - Post vacancies for company
+  - View applications for company's vacancies
+  - Update application statuses
+end note
+
+note left of UPDATING
+  IMPORTANT:
+  Company association
+  CANNOT be changed
+
+  Only 'role' field
+  can be updated
+end note
+
+note bottom of DELETED
+  On deletion:
+  - Vacancies remain (owned by company)
+  - Other employers from same company
+    can still manage vacancies
+end note
+
+note "Company-Employer Relationship:\n\n1 Company -> N Employer Profiles\nEach employer has a role\n(HR Manager, Recruiter, etc.)" as N1
+
+@enduml

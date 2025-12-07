@@ -1,0 +1,75 @@
+@startuml User Registration Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - User Registration Activity Diagram
+
+|User|
+start
+:Enter email and password;
+:Submit registration form;
+
+|System|
+:Receive POST /auth/register;
+:Validate email format;
+
+if (Email format valid?) then (yes)
+    :Check email uniqueness;
+
+    |Database|
+    :SELECT user WHERE email = ?;
+
+    |System|
+    if (Email already exists?) then (yes)
+        :Throw EmailAlreadyInUse;
+        |User|
+        :Display "Email already in use" error;
+        stop
+    else (no)
+        :Validate password strength;
+
+        if (Password strong enough?) then (yes)
+            :Hash password with BCrypt;
+            :Create User entity;
+
+            |Database|
+            :INSERT INTO users;
+            :Return user_id;
+
+            |System|
+            :Generate JWT access token;
+            :Generate JWT refresh token;
+            :Store refresh token;
+
+            |Database|
+            :INSERT INTO refresh_tokens;
+
+            |System|
+            :Build AuthResponse;
+
+            |User|
+            :Receive tokens and user info;
+            :Store tokens locally;
+            :Redirect to dashboard;
+            stop
+
+        else (no)
+            :Throw WeakPassword;
+            |User|
+            :Display "Password too weak" error;
+            stop
+        endif
+    endif
+
+else (no)
+    :Return validation error;
+    |User|
+    :Display "Invalid email format" error;
+    stop
+endif
+
+@enduml

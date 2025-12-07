@@ -1,0 +1,126 @@
+@startuml Application State Machine
+
+skinparam state {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+title NotDjinni - Application Status State Diagram
+
+[*] --> APPLIED : submitApplication\n[job seeker]
+
+state APPLIED {
+    APPLIED : Initial submission
+    APPLIED : Awaiting review
+}
+
+state REVIEWING {
+    REVIEWING : Under consideration
+    REVIEWING : Employer evaluating
+}
+
+state INTERVIEW {
+    INTERVIEW : Interview scheduled
+    INTERVIEW : or completed
+}
+
+state TEST_TASK {
+    TEST_TASK : Technical assessment
+    TEST_TASK : assigned
+}
+
+state OFFER {
+    OFFER : Job offer extended
+    OFFER : Awaiting response
+}
+
+state HIRED {
+    HIRED : Offer accepted
+    HIRED : Position filled
+}
+
+state REJECTED {
+    REJECTED : Application declined
+    REJECTED : by employer
+}
+
+state WITHDRAWN {
+    WITHDRAWN : Cancelled by
+    WITHDRAWN : job seeker
+}
+
+' ===== Main Flow =====
+APPLIED --> REVIEWING : startReview\n[employer]
+
+' From REVIEWING
+REVIEWING --> INTERVIEW : scheduleInterview\n[employer]
+REVIEWING --> TEST_TASK : assignTask\n[employer]
+REVIEWING --> REJECTED : reject\n[employer]
+
+' From INTERVIEW
+INTERVIEW --> TEST_TASK : assignTask\n[employer]
+INTERVIEW --> OFFER : extendOffer\n[employer]
+INTERVIEW --> REJECTED : reject\n[employer]
+
+' From TEST_TASK
+TEST_TASK --> INTERVIEW : discussResults\n[employer]
+TEST_TASK --> OFFER : passTest\n[employer]
+TEST_TASK --> REJECTED : failTest\n[employer]
+
+' From OFFER
+OFFER --> HIRED : acceptOffer\n[employer confirms]
+OFFER --> REJECTED : declineOffer\n[candidate/employer]
+
+' ===== Withdrawal (from any active state) =====
+APPLIED --> WITHDRAWN : withdraw\n[job seeker]
+REVIEWING --> WITHDRAWN : withdraw\n[job seeker]
+INTERVIEW --> WITHDRAWN : withdraw\n[job seeker]
+TEST_TASK --> WITHDRAWN : withdraw\n[job seeker]
+OFFER --> WITHDRAWN : withdraw\n[job seeker]
+
+' Final states
+HIRED --> [*]
+REJECTED --> [*]
+WITHDRAWN --> [*]
+
+' Annotations
+note right of APPLIED
+  Job seeker submits
+  application with
+  optional cover letter
+end note
+
+note right of REVIEWING
+  Employer reviews
+  seeker profile and
+  cover letter
+end note
+
+note left of INTERVIEW
+  Can have multiple
+  interview rounds
+end note
+
+note left of TEST_TASK
+  Technical assessment
+  coding challenge
+  or assignment
+end note
+
+note bottom of HIRED
+  Final Success:
+  Candidate hired
+end note
+
+note bottom of REJECTED
+  Final Failure:
+  Application declined
+end note
+
+note bottom of WITHDRAWN
+  Final Exit:
+  Candidate withdrew
+end note
+
+@enduml

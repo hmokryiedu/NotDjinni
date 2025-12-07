@@ -1,0 +1,156 @@
+@startuml System Deployment
+
+skinparam node {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+skinparam database {
+    BackgroundColor LightGreen
+    BorderColor DarkGreen
+}
+
+skinparam cloud {
+    BackgroundColor AliceBlue
+    BorderColor SteelBlue
+}
+
+skinparam component {
+    BackgroundColor Wheat
+    BorderColor Peru
+}
+
+skinparam artifact {
+    BackgroundColor LightCyan
+    BorderColor DarkCyan
+}
+
+title NotDjinni - System Deployment Diagram
+
+' ==================== CLIENT LAYER ====================
+cloud "Client Layer" {
+    node "Web Browser" as WB {
+        artifact "SPA / Web App" as WebApp
+    }
+
+    node "Mobile Device" as Mobile {
+        artifact "Mobile App\n(Future)" as MobileApp
+    }
+
+    node "API Client" as APIClient {
+        artifact "Postman\ncurl\nHTTP Client" as Tools
+    }
+}
+
+' ==================== APPLICATION SERVER ====================
+node "Application Server" as AppServer {
+    node "JVM Runtime\n(JDK 17+)" as JVM {
+        component [Ktor HTTP Server\nport: 8080] as Ktor
+
+        artifact "notdjinni.jar" as JAR
+
+        package "Application Layers" {
+            component [Presentation Layer\n(Routes, DTOs)] as Presentation
+            component [Domain Layer\n(Interfaces, Exceptions)] as Domain
+            component [Data Layer\n(Repositories)] as Data
+            component [Database Layer\n(DAOs, Tables)] as DBLayer
+        }
+
+        package "Libraries" {
+            component [Koin DI] as Koin
+            component [kotlinx.serialization] as KotlinX
+            component [Exposed ORM] as Exposed
+            component [JWT (java-jwt)] as JWT
+        }
+    }
+
+    artifact "application.conf" as Config
+}
+
+' ==================== DATABASE SERVER ====================
+node "Database Server" as DBServer {
+    database "PostgreSQL 14+" as PG {
+        storage "notdjinni" as NotDjinniDB {
+            collections "users" as T1
+            collections "job_seeker_profiles" as T2
+            collections "work_experiences" as T3
+            collections "companies" as T4
+            collections "employer_profiles" as T5
+            collections "vacancies" as T6
+            collections "applications" as T7
+            collections "refresh_tokens" as T8
+        }
+    }
+}
+
+' ==================== CONNECTIONS ====================
+
+' Client to Application
+WB --> Ktor : "HTTPS\nREST API"
+Mobile --> Ktor : "HTTPS\nREST API"
+APIClient --> Ktor : "HTTP/HTTPS\nREST API"
+
+' Internal connections
+Ktor --> Presentation
+Presentation --> Domain
+Data --> Domain : implements
+Data --> DBLayer : uses
+
+' Application to Database
+DBLayer --> PG : "JDBC\nPostgreSQL Driver\nConnection Pool"
+
+' Configuration
+Config --> Ktor : reads
+
+' Libraries
+Koin --> Presentation : DI
+Koin --> Data : DI
+KotlinX --> Presentation : JSON
+Exposed --> DBLayer : ORM
+JWT --> Presentation : Auth
+
+' ==================== NOTES ====================
+
+note right of AppServer
+  Deployment Options:
+  - Docker container
+  - Kubernetes pod
+  - Virtual machine
+  - Bare metal server
+
+  Scaling: Horizontal
+  (multiple instances)
+end note
+
+note right of PG
+  Tables:
+  - users (auth)
+  - job_seeker_profiles
+  - work_experiences
+  - companies
+  - employer_profiles
+  - vacancies
+  - applications
+  - refresh_tokens
+end note
+
+note bottom of NotDjinniDB
+  Constraints:
+  - FK with CASCADE DELETE
+  - UNIQUE indexes
+  - Auto-increment IDs
+end note
+
+' ==================== LEGEND ====================
+
+legend right
+  |= Symbol |= Description |
+  | Cloud | Client Layer |
+  | Node | Server/Container |
+  | Database | Data Storage |
+  | Component | Software Module |
+  | Artifact | Deployable Unit |
+endlegend
+
+@enduml

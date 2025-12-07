@@ -1,0 +1,435 @@
+@startuml NotDjinni Presentation Layer
+
+skinparam class {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 10
+}
+
+skinparam interface {
+    BackgroundColor LightBlue
+    BorderColor Blue
+    FontSize 10
+}
+
+title NotDjinni - Presentation Layer (Routes, DTOs, Resources)
+
+' ==================== ROUTE INTERFACE ====================
+interface Route {
+    + install(root: Routing): Unit
+}
+
+interface Router {
+    + install(application: Application): Unit
+}
+
+' ==================== ROUTES ====================
+package "Routes" <<Rectangle>> {
+    class AuthRoute {
+        - authRepository: AuthRepository
+        --
+        + install(root: Routing)
+        - login()
+        - register()
+        - refresh()
+        - logout()
+    }
+
+    class UserRoute {
+        - userRepository: UserRepository
+        --
+        + install(root: Routing)
+        - getMe()
+    }
+
+    class TokenRoute {
+        + install(root: Routing)
+    }
+
+    class SeekerRoute {
+        - seekerProfileRepository: SeekerProfileRepository
+        --
+        + install(root: Routing)
+        - getProfile()
+        - createProfile()
+        - updateProfile()
+        - deleteProfile()
+        - addWorkExperience()
+        - updateWorkExperience()
+        - deleteWorkExperience()
+    }
+
+    class CompanyRoute {
+        - companyRepository: CompanyRepository
+        --
+        + install(root: Routing)
+        - getAllCompanies()
+        - getCompany()
+        - searchCompanies()
+        - createCompany()
+        - updateCompany()
+        - deleteCompany()
+    }
+
+    class EmployerRoute {
+        - employerProfileRepository: EmployerProfileRepository
+        --
+        + install(root: Routing)
+        - getProfile()
+        - createProfile()
+        - updateProfile()
+        - deleteProfile()
+        - getMyVacancies()
+    }
+
+    class VacancyRoute {
+        - vacancyRepository: VacancyRepository
+        --
+        + install(root: Routing)
+        - getVacancies()
+        - getVacancy()
+        - getRecentVacancies()
+        - getCompanyVacancies()
+        - createVacancy()
+        - updateVacancy()
+        - deleteVacancy()
+        - updateVacancyStatus()
+    }
+
+    class ApplicationRoute {
+        - applicationRepository: ApplicationRepository
+        --
+        + install(root: Routing)
+        - createApplication()
+        - getApplication()
+        - getMyApplications()
+        - updateApplication()
+        - deleteApplication()
+        - updateApplicationStatus()
+        - getVacancyApplications()
+        - checkIfApplied()
+    }
+
+    class DefaultRouter {
+        - authRoute: AuthRoute
+        - userRoute: UserRoute
+        - tokenRoute: TokenRoute
+        - seekerRoute: SeekerRoute
+        - companyRoute: CompanyRoute
+        - employerRoute: EmployerRoute
+        - vacancyRoute: VacancyRoute
+        - applicationRoute: ApplicationRoute
+        --
+        + install(application: Application)
+    }
+}
+
+' ==================== REQUEST DTOs ====================
+package "Request DTOs" <<Rectangle>> {
+    class LoginRequest {
+        + email: String
+        + password: String
+    }
+
+    class RegisterRequest {
+        + email: String
+        + password: String
+    }
+
+    class RefreshTokenRequest {
+        + refreshToken: String
+    }
+
+    class CreateProfileRequest {
+        + speciality: String
+        + experienceYears: Int
+        + desiredSalary: Int
+        + aboutMe: String?
+        + jobCategory: String
+        + workExperience: List<WorkExperienceRequest>
+    }
+
+    class UpdateProfileRequest {
+        + speciality: String?
+        + experienceYears: Int?
+        + desiredSalary: Int?
+        + aboutMe: String?
+        + jobCategory: String?
+    }
+
+    class WorkExperienceRequest {
+        + companyName: String
+        + position: String
+        + description: String
+        + startDate: String
+        + endDate: String?
+    }
+
+    class CreateCompanyRequest {
+        + companyName: String
+        + website: String?
+        + description: String
+    }
+
+    class UpdateCompanyRequest {
+        + companyName: String?
+        + website: String?
+        + description: String?
+    }
+
+    class CreateEmployerProfileRequest {
+        + companyId: Long
+        + role: String
+    }
+
+    class UpdateEmployerProfileRequest {
+        + role: String
+    }
+
+    class CreateVacancyRequest {
+        + title: String
+        + description: String
+        + salaryMin: Int
+        + salaryMax: Int
+        + minExperienceYears: Int?
+        + employmentType: String?
+        + category: String?
+        + status: String
+    }
+
+    class CreateApplicationRequest {
+        + vacancyId: Long
+        + coverLetter: String?
+    }
+
+    class UpdateApplicationStatusRequest {
+        + status: String
+    }
+}
+
+' ==================== RESPONSE DTOs ====================
+package "Response DTOs" <<Rectangle>> {
+    class AuthResponse {
+        + accessToken: String
+        + refreshToken: String
+        + user: UserResponse
+    }
+
+    class UserResponse {
+        + id: Long
+        + email: String
+    }
+
+    class SeekerProfileResponse {
+        + id: Long
+        + specialty: String
+        + experienceYears: Int
+        + desiredSalary: Int
+        + aboutMe: String?
+        + jobCategory: String
+        + workExperience: List<WorkExperienceResponse>
+    }
+
+    class WorkExperienceResponse {
+        + id: Long
+        + companyName: String
+        + position: String
+        + description: String
+        + startDate: String
+        + endDate: String?
+        + isCurrent: Boolean
+    }
+
+    class CompanyResponse {
+        + id: Long
+        + companyName: String
+        + website: String?
+        + description: String
+    }
+
+    class EmployerProfileResponse {
+        + id: Long
+        + role: String
+        + company: CompanyResponse
+    }
+
+    class VacancyResponse {
+        + id: Long
+        + companyId: Long
+        + title: String
+        + description: String
+        + salaryMin: Int
+        + salaryMax: Int
+        + minExperienceYears: Int?
+        + employmentType: String?
+        + category: String?
+        + status: String
+        + createdAt: String
+        + updatedAt: String
+    }
+
+    class VacancyWithDetailsResponse {
+        + id: Long
+        + company: CompanyResponse
+        + title: String
+        + description: String
+        + salaryMin: Int
+        + salaryMax: Int
+        + status: String
+        + createdAt: String
+        + updatedAt: String
+    }
+
+    class ApplicationResponse {
+        + id: Long
+        + vacancyId: Long
+        + jobSeekerId: Long
+        + status: String
+        + coverLetter: String?
+        + createdAt: String
+        + updatedAt: String
+    }
+
+    class ApplicationWithDetailsResponse {
+        + id: Long
+        + vacancy: VacancyWithDetailsResponse
+        + jobSeeker: SeekerProfileResponse
+        + status: String
+        + coverLetter: String?
+        + createdAt: String
+        + updatedAt: String
+    }
+}
+
+' ==================== RESOURCES ====================
+package "Ktor Resources (@Resource)" <<Rectangle>> {
+    class "Auth" as AuthRes <<@Resource>> {
+        /auth
+    }
+    class "Auth.Login" as AuthLogin <<@Resource>> {
+        /auth/login
+    }
+    class "Auth.Register" as AuthRegister <<@Resource>> {
+        /auth/register
+    }
+    class "Auth.Refresh" as AuthRefresh <<@Resource>> {
+        /auth/refresh
+    }
+
+    class "User" as UserRes <<@Resource>> {
+        /user
+    }
+    class "User.Me" as UserMe <<@Resource>> {
+        /user/me
+    }
+
+    class "Seeker" as SeekerRes <<@Resource>> {
+        /seeker
+    }
+    class "Seeker.Profile" as SeekerProfile <<@Resource>> {
+        /seeker/profile
+    }
+    class "Seeker.Profile.Experience" as SeekerExp <<@Resource>> {
+        /seeker/profile/experience
+    }
+
+    class "Company" as CompanyRes <<@Resource>> {
+        /company
+    }
+    class "Company.ById" as CompanyById <<@Resource>> {
+        /company/{id}
+    }
+    class "Company.Search" as CompanySearch <<@Resource>> {
+        /company/search
+    }
+
+    class "Employer" as EmployerRes <<@Resource>> {
+        /employer
+    }
+    class "Employer.Profile" as EmployerProfile <<@Resource>> {
+        /employer/profile
+    }
+    class "Employer.Vacancies" as EmployerVacancies <<@Resource>> {
+        /employer/vacancies
+    }
+
+    class "Vacancy" as VacancyRes <<@Resource>> {
+        /vacancy
+    }
+    class "Vacancy.ById" as VacancyById <<@Resource>> {
+        /vacancy/{id}
+    }
+    class "Vacancy.Status" as VacancyStatus <<@Resource>> {
+        /vacancy/{id}/status
+    }
+    class "Vacancy.Recent" as VacancyRecent <<@Resource>> {
+        /vacancy/recent
+    }
+
+    class "Application" as AppRes <<@Resource>> {
+        /application
+    }
+    class "Application.ById" as AppById <<@Resource>> {
+        /application/{id}
+    }
+    class "Application.Status" as AppStatus <<@Resource>> {
+        /application/{id}/status
+    }
+    class "Application.ByVacancy" as AppByVacancy <<@Resource>> {
+        /application/vacancy/{vacancyId}
+    }
+}
+
+' ==================== RELATIONSHIPS ====================
+' Route implementations
+AuthRoute ..|> Route
+UserRoute ..|> Route
+TokenRoute ..|> Route
+SeekerRoute ..|> Route
+CompanyRoute ..|> Route
+EmployerRoute ..|> Route
+VacancyRoute ..|> Route
+ApplicationRoute ..|> Route
+
+DefaultRouter ..|> Router
+DefaultRouter --> AuthRoute
+DefaultRouter --> UserRoute
+DefaultRouter --> TokenRoute
+DefaultRouter --> SeekerRoute
+DefaultRouter --> CompanyRoute
+DefaultRouter --> EmployerRoute
+DefaultRouter --> VacancyRoute
+DefaultRouter --> ApplicationRoute
+
+' Route-Resource associations
+AuthRoute ..> AuthRes : uses
+AuthRoute ..> AuthLogin : uses
+AuthRoute ..> AuthRegister : uses
+AuthRoute ..> AuthRefresh : uses
+
+UserRoute ..> UserRes : uses
+UserRoute ..> UserMe : uses
+
+SeekerRoute ..> SeekerRes : uses
+SeekerRoute ..> SeekerProfile : uses
+SeekerRoute ..> SeekerExp : uses
+
+CompanyRoute ..> CompanyRes : uses
+CompanyRoute ..> CompanyById : uses
+CompanyRoute ..> CompanySearch : uses
+
+EmployerRoute ..> EmployerRes : uses
+EmployerRoute ..> EmployerProfile : uses
+EmployerRoute ..> EmployerVacancies : uses
+
+VacancyRoute ..> VacancyRes : uses
+VacancyRoute ..> VacancyById : uses
+VacancyRoute ..> VacancyStatus : uses
+VacancyRoute ..> VacancyRecent : uses
+
+ApplicationRoute ..> AppRes : uses
+ApplicationRoute ..> AppById : uses
+ApplicationRoute ..> AppStatus : uses
+ApplicationRoute ..> AppByVacancy : uses
+
+@enduml

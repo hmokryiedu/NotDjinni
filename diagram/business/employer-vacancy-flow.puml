@@ -1,0 +1,140 @@
+@startuml Employer Vacancy Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Employer Vacancy Management Activity Diagram
+
+|Employer|
+start
+:Access vacancy management;
+
+|System|
+:Verify JWT authentication;
+
+if (JWT valid?) then (yes)
+    :Extract userId from token;
+
+    |Database|
+    :SELECT employer_profile WHERE user_id = ?;
+
+    |System|
+    if (Has employer profile?) then (yes)
+        :Get companyId from profile;
+
+        |Employer|
+        switch (Choose action?)
+        case (View My Vacancies)
+            |System|
+            :GET /employer/vacancies;
+
+            |Database|
+            :SELECT vacancies WHERE company_id = ?;
+
+            |Employer|
+            :Display vacancy list with statuses;
+
+        case (Create Vacancy)
+            |Employer|
+            :Fill vacancy form;
+            :Enter title, description;
+            :Set salary range (min, max);
+            :Set experience requirements;
+            :Select employment type;
+            :Select job category;
+            :Choose status (DRAFT/ACTIVE);
+            :Submit;
+
+            |System|
+            :POST /vacancy;
+            :Validate vacancy data;
+            :Auto-link to employer's company;
+
+            |Database|
+            :INSERT INTO vacancies\n(company_id from profile);
+
+            |Employer|
+            :Display created vacancy;
+            :Show in vacancy list;
+
+        case (Update Vacancy)
+            |Employer|
+            :Select vacancy to edit;
+
+            |System|
+            :Verify employer's company owns vacancy;
+
+            if (Authorized?) then (yes)
+                |Employer|
+                :Modify vacancy fields;
+                :Submit changes;
+
+                |System|
+                :PUT /vacancy/{id};
+
+                |Database|
+                :UPDATE vacancies WHERE id = ?;
+
+                |Employer|
+                :Display "Updated" message;
+            else (no)
+                |Employer|
+                :Show "Unauthorized" error;
+            endif
+
+        case (Change Status)
+            |Employer|
+            :Select new status\n(ACTIVE/PAUSED/CLOSED);
+
+            |System|
+            :PUT /vacancy/{id}/status;
+            :Verify ownership;
+
+            |Database|
+            :UPDATE vacancies SET status = ?;
+
+            |Employer|
+            :Display status change confirmation;
+
+        case (Delete Vacancy)
+            |Employer|
+            :Confirm deletion;
+            note right
+              Warning: This will
+              delete all applications
+              for this vacancy
+            end note
+
+            |System|
+            :DELETE /vacancy/{id};
+            :Verify ownership;
+
+            |Database|
+            :DELETE applications WHERE vacancy_id = ? (CASCADE);
+            :DELETE vacancies WHERE id = ?;
+
+            |Employer|
+            :Remove from vacancy list;
+            :Display "Deleted" message;
+
+        endswitch
+
+    else (no)
+        |Employer|
+        :Show "Create employer profile first";
+        :Redirect to profile creation;
+        :Must select a company;
+        stop
+    endif
+
+else (no)
+    |Employer|
+    :Redirect to login;
+endif
+
+stop
+
+@enduml

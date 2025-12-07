@@ -1,0 +1,126 @@
+@startuml Job Seeker System Collaboration
+
+skinparam object {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam actor {
+    BackgroundColor LightBlue
+    BorderColor Blue
+}
+
+title NotDjinni - Job Seeker System Collaboration Diagram
+
+' ==================== ACTORS ====================
+actor "Job Seeker" as JS
+
+' ==================== ROUTES ====================
+object "AuthRoute" as AuthR {
+    /auth/register
+    /auth/login
+    /auth/refresh
+}
+
+object "SeekerRoute" as SeekerR {
+    /seeker/profile
+    /seeker/profile/experience
+}
+
+object "VacancyRoute" as VacR {
+    /vacancy
+    /vacancy/{id}
+    /vacancy/recent
+}
+
+object "ApplicationRoute" as AppR {
+    /application
+    /application/{id}
+    /application/check/vacancy/{id}
+}
+
+' ==================== REPOSITORIES ====================
+object "AuthRepository" as AuthRepo {
+    register()
+    login()
+    refresh()
+}
+
+object "SeekerProfileRepository" as SeekerRepo {
+    getProfile()
+    createProfile()
+    updateProfile()
+    deleteProfile()
+    addWorkExperience()
+}
+
+object "VacancyRepository" as VacRepo {
+    getVacancies()
+    getVacancy()
+    getRecentVacancies()
+}
+
+object "ApplicationRepository" as AppRepo {
+    createApplication()
+    getMyApplications()
+    updateApplication()
+    deleteApplication()
+    hasApplied()
+}
+
+' ==================== INTERACTIONS ====================
+
+' Authentication flow
+JS -- AuthR : "1. Register/Login"
+AuthR -- AuthRepo : "2. Auth operations"
+
+' Profile management flow
+JS -- SeekerR : "3. Manage Profile"
+SeekerR -- SeekerRepo : "4. Profile CRUD"
+
+' Vacancy browsing flow
+JS -- VacR : "5. Browse Vacancies"
+VacR -- VacRepo : "6. Search & Filter"
+
+' Application flow
+JS -- AppR : "7. Apply to Vacancy"
+AppR -- AppRepo : "8. Create Application"
+
+' Application tracking flow
+JS -- AppR : "9. Track Applications"
+AppR -- AppRepo : "10. Get My Applications"
+
+' Check application status
+JS -- AppR : "11. Check if Applied"
+AppR -- AppRepo : "12. hasApplied()"
+
+' ==================== NOTES ====================
+
+note right of JS
+  Job Seeker Workflow:
+  1. Register & Login
+  2. Create seeker profile
+  3. Add work experiences
+  4. Browse vacancies
+  5. Apply to vacancies
+  6. Track application status
+end note
+
+note bottom of SeekerRepo
+  Profile includes:
+  - speciality
+  - experienceYears
+  - desiredSalary
+  - jobCategory
+  - workExperience[]
+end note
+
+note bottom of AppRepo
+  Application lifecycle:
+  APPLIED -> REVIEWING ->
+  INTERVIEW/TEST_TASK ->
+  OFFER -> HIRED
+end note
+
+@enduml

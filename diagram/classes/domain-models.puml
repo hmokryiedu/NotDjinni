@@ -1,0 +1,215 @@
+@startuml NotDjinni Domain Models
+
+skinparam class {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+skinparam enum {
+    BackgroundColor LightGreen
+    BorderColor Gray
+    FontSize 11
+}
+
+title NotDjinni - Domain Models Class Diagram
+
+' ==================== USER & AUTH ====================
+package "User & Authentication" {
+    class User {
+        + id: Long
+        + name: String
+        + email: String
+    }
+
+    class AuthTokens {
+        + accessToken: String
+        + refreshToken: String
+    }
+
+    class RefreshToken {
+        + id: Long
+        + userId: Long
+        + token: String
+        + expiresAt: Instant
+    }
+}
+
+' ==================== JOB SEEKER ====================
+package "Job Seeker" {
+    class SeekerProfile {
+        + id: Long
+        + aboutMe: String?
+        + speciality: String
+        + desiredSalary: Int
+        + experienceYears: Int
+        + jobCategory: JobCategoryCode
+        + workExperience: List<WorkExperience>
+    }
+
+    class WorkExperience {
+        + id: Long
+        + companyName: String
+        + position: String
+        + description: String
+        + startDate: Instant
+        + endDate: Instant?
+        --
+        + isCurrent: Boolean
+    }
+}
+
+' ==================== COMPANY & EMPLOYER ====================
+package "Company & Employer" {
+    class Company {
+        + id: Long
+        + companyName: String
+        + website: String?
+        + description: String
+    }
+
+    class EmployerProfile {
+        + id: Long
+        + companyId: Long
+        + role: String
+    }
+
+    class EmployerProfileWithCompany {
+        + id: Long
+        + role: String
+        + company: Company
+    }
+}
+
+' ==================== VACANCY ====================
+package "Vacancy" {
+    class Vacancy {
+        + id: Long
+        + companyId: Long
+        + title: String
+        + description: String
+        + salary: Salary
+        + minExperienceYears: Int?
+        + employmentType: EmploymentTypeCode?
+        + category: JobCategoryCode?
+        + status: VacancyStatusCode
+        + createdAt: Instant
+        + updatedAt: Instant
+    }
+
+    class VacancyWithDetails {
+        + id: Long
+        + title: String
+        + description: String
+        + salary: Salary
+        + minExperienceYears: Int?
+        + employmentType: EmploymentTypeCode?
+        + category: JobCategoryCode?
+        + status: VacancyStatusCode
+        + createdAt: Instant
+        + updatedAt: Instant
+        + company: Company
+    }
+
+    class Salary {
+        + min: Int
+        + max: Int
+    }
+}
+
+' ==================== APPLICATION ====================
+package "Application" {
+    class Application {
+        + id: Long
+        + vacancyId: Long
+        + jobSeekerId: Long
+        + statusCode: ApplicationStatusCode
+        + coverLetter: String?
+        + createdAt: Instant
+        + updatedAt: Instant
+    }
+
+    class ApplicationWithDetails {
+        + id: Long
+        + statusCode: ApplicationStatusCode
+        + coverLetter: String?
+        + createdAt: Instant
+        + updatedAt: Instant
+        + vacancy: VacancyWithDetails
+        + jobSeeker: SeekerProfile
+    }
+}
+
+' ==================== ENUMS ====================
+package "Enumerations" {
+    enum JobCategoryCode {
+        SOFTWARE_DEV
+        DATA_SCIENCE
+        DEVOPS
+        QA
+        PRODUCT_MGMT
+        DESIGN
+        MARKETING
+        SALES
+        HR
+        FINANCE
+        OPERATIONS
+        SUPPORT
+    }
+
+    enum EmploymentTypeCode {
+        FULL_TIME
+        PART_TIME
+        CONTRACT
+        TEMPORARY
+        INTERNSHIP
+        FREELANCE
+    }
+
+    enum VacancyStatusCode {
+        DRAFT
+        ACTIVE
+        PAUSED
+        CLOSED
+        EXPIRED
+    }
+
+    enum ApplicationStatusCode {
+        APPLIED
+        REVIEWING
+        INTERVIEW
+        TEST_TASK
+        OFFER
+        HIRED
+        REJECTED
+        WITHDRAWN
+    }
+}
+
+' ==================== RELATIONSHIPS ====================
+User "1" -- "0..1" SeekerProfile : has
+User "1" -- "0..1" EmployerProfile : has
+User "1" -- "*" RefreshToken : owns
+
+SeekerProfile "1" *-- "*" WorkExperience : contains
+SeekerProfile ..> JobCategoryCode : uses
+
+EmployerProfile "*" -- "1" Company : belongs to
+EmployerProfileWithCompany o-- Company : contains
+
+Company "1" -- "*" Vacancy : posts
+
+Vacancy *-- Salary : contains
+Vacancy ..> EmploymentTypeCode : uses
+Vacancy ..> JobCategoryCode : uses
+Vacancy ..> VacancyStatusCode : uses
+VacancyWithDetails o-- Company : contains
+
+Application "*" -- "1" Vacancy : for
+Application "*" -- "1" SeekerProfile : from
+Application ..> ApplicationStatusCode : uses
+
+ApplicationWithDetails o-- VacancyWithDetails : contains
+ApplicationWithDetails o-- SeekerProfile : contains
+
+@enduml

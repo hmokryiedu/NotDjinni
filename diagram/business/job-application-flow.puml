@@ -1,0 +1,92 @@
+@startuml Job Application Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Job Application Activity Diagram
+
+|Job Seeker|
+start
+:Browse vacancies;
+:Search/filter by criteria\n(category, salary, location, etc.);
+
+|System|
+:GET /vacancy?filters...;
+
+|Database|
+:SELECT vacancies with filters;
+
+|System|
+:Return vacancy list;
+
+|Job Seeker|
+:View vacancy list;
+:Select interesting vacancy;
+
+|System|
+:GET /vacancy/{id};
+
+|Database|
+:SELECT vacancy with company details;
+
+|Job Seeker|
+:Read vacancy details;
+:Decide to apply;
+
+if (User logged in?) then (yes)
+    |System|
+    :Extract userId from JWT;
+
+    |Database|
+    :SELECT seeker_profile WHERE user_id = ?;
+
+    |System|
+    if (Has seeker profile?) then (yes)
+        |Database|
+        :SELECT application WHERE vacancy_id = ? AND job_seeker_id = ?;
+
+        |System|
+        if (Already applied?) then (yes)
+            |Job Seeker|
+            :Show "Already applied" message;
+            :Display existing application status;
+            stop
+        else (no)
+            |Job Seeker|
+            :Write cover letter (optional);
+            :Click "Apply" button;
+
+            |System|
+            :POST /application;
+            :Validate request;
+
+            |Database|
+            :INSERT INTO applications\n(vacancy_id, job_seeker_id, status='APPLIED');
+
+            |System|
+            :Return ApplicationWithDetails;
+
+            |Job Seeker|
+            :Display "Application submitted!" success;
+            :Show application in "My Applications";
+            stop
+        endif
+
+    else (no)
+        |Job Seeker|
+        :Show "Create profile first" prompt;
+        :Redirect to profile creation;
+        stop
+    endif
+
+else (no)
+    |Job Seeker|
+    :Show "Login to apply" prompt;
+    :Redirect to login page;
+    stop
+endif
+
+@enduml

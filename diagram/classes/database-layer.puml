@@ -1,0 +1,277 @@
+@startuml NotDjinni Database Layer
+
+skinparam class {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam interface {
+    BackgroundColor LightBlue
+    BorderColor Blue
+    FontSize 11
+}
+
+title NotDjinni - Database Layer Class Diagram
+
+' ==================== TABLES ====================
+package "Exposed Tables" <<Rectangle>> {
+    class UserTable <<object>> {
+        + id: Column<Long>
+        + name: Column<String>
+        + email: Column<String>
+        + password: Column<String>
+    }
+
+    class SeekerProfileTable <<object>> {
+        + id: Column<Long>
+        + userId: Column<Long> <<FK UNIQUE>>
+        + specialty: Column<String>
+        + experienceYears: Column<Int>
+        + desiredSalary: Column<Int>
+        + aboutMe: Column<String?>
+        + jobCategory: Column<JobCategoryCode>
+    }
+
+    class WorkExperienceTable <<object>> {
+        + id: Column<Long>
+        + profileId: Column<Long> <<FK>>
+        + companyName: Column<String>
+        + position: Column<String>
+        + description: Column<String>
+        + startDate: Column<Instant>
+        + endDate: Column<Instant?>
+    }
+
+    class CompanyTable <<object>> {
+        + id: Column<Long>
+        + companyName: Column<String> <<UNIQUE>>
+        + website: Column<String?>
+        + description: Column<String>
+    }
+
+    class EmployerProfileTable <<object>> {
+        + id: Column<Long>
+        + userId: Column<Long> <<FK UNIQUE>>
+        + companyId: Column<Long> <<FK>>
+        + role: Column<String>
+    }
+
+    class VacancyTable <<object>> {
+        + id: Column<Long>
+        + companyId: Column<Long> <<FK>>
+        + title: Column<String>
+        + description: Column<String>
+        + salaryMin: Column<Int>
+        + salaryMax: Column<Int>
+        + minExperienceYears: Column<Int?>
+        + employmentType: Column<EmploymentTypeCode?>
+        + category: Column<JobCategoryCode?>
+        + status: Column<VacancyStatusCode>
+        + createdAt: Column<Instant>
+        + updatedAt: Column<Instant>
+    }
+
+    class ApplicationTable <<object>> {
+        + id: Column<Long>
+        + vacancyId: Column<Long> <<FK CASCADE>>
+        + jobSeekerId: Column<Long> <<FK CASCADE>>
+        + statusCode: Column<ApplicationStatusCode>
+        + coverLetter: Column<String?>
+        + createdAt: Column<Instant>
+        + updatedAt: Column<Instant>
+        --
+        <<UNIQUE(vacancyId, jobSeekerId)>>
+    }
+
+    class RefreshTokenTable <<object>> {
+        + id: Column<Long>
+        + userId: Column<Long>
+        + token: Column<String> <<UNIQUE>>
+        + expiresAt: Column<Instant>
+    }
+}
+
+' ==================== ENTITIES ====================
+package "Entity Classes" <<Rectangle>> {
+    class UserEntity {
+        + id: Long
+        + name: String
+        + email: String
+        + password: String
+    }
+
+    class SeekerProfileEntity {
+        + id: Long
+        + userId: Long
+        + specialty: String
+        + experienceYears: Int
+        + desiredSalary: Int
+        + aboutMe: String?
+        + jobCategory: JobCategoryCode
+    }
+
+    class WorkExperienceEntity {
+        + id: Long
+        + profileId: Long
+        + companyName: String
+        + position: String
+        + description: String
+        + startDate: Instant
+        + endDate: Instant?
+    }
+
+    class CompanyEntity {
+        + id: Long
+        + companyName: String
+        + website: String?
+        + description: String
+    }
+
+    class EmployerProfileEntity {
+        + id: Long
+        + userId: Long
+        + companyId: Long
+        + role: String
+    }
+
+    class VacancyEntity {
+        + id: Long
+        + companyId: Long
+        + title: String
+        + description: String
+        + salaryMin: Int
+        + salaryMax: Int
+        + minExperienceYears: Int?
+        + employmentType: EmploymentTypeCode?
+        + category: JobCategoryCode?
+        + status: VacancyStatusCode
+        + createdAt: Instant
+        + updatedAt: Instant
+    }
+
+    class ApplicationEntity {
+        + id: Long
+        + vacancyId: Long
+        + jobSeekerId: Long
+        + statusCode: ApplicationStatusCode
+        + coverLetter: String?
+        + createdAt: Instant
+        + updatedAt: Instant
+    }
+
+    class RefreshTokenEntity {
+        + id: Long
+        + userId: Long
+        + token: String
+        + expiresAt: Instant
+    }
+}
+
+' ==================== DAO INTERFACES ====================
+package "DAO Interfaces" <<Rectangle>> {
+    interface UserDao {
+        + getUser(id: Long): UserEntity?
+        + upsertUser(user: UserEntity): Long
+        + getUserByEmail(email: String): UserEntity?
+    }
+
+    interface SeekerProfileDao {
+        + createProfile(profile: SeekerProfileEntity): Long
+        + getProfile(id: Long): SeekerProfileEntity?
+        + getProfileByUserId(userId: Long): SeekerProfileEntity?
+        + updateProfile(profile: SeekerProfileEntity): Boolean
+        + deleteProfile(id: Long): Boolean
+        + profileExists(userId: Long): Boolean
+        + getProfileWithWorkExperienceByUserId(userId: Long)
+        + getProfileWithWorkExperienceByProfileId(id: Long)
+    }
+
+    interface WorkExperienceDao {
+        + createWorkExperience(exp: WorkExperienceEntity): Long
+        + createWorkExperiences(exps: List<WorkExperienceEntity>)
+        + getWorkExperience(id: Long): WorkExperienceEntity?
+        + updateWorkExperience(exp: WorkExperienceEntity): Boolean
+        + deleteWorkExperience(id: Long): Boolean
+        + getByProfileId(profileId: Long): List<WorkExperienceEntity>
+    }
+
+    interface CompanyDao {
+        + getCompany(id: Long): CompanyEntity?
+        + getAllCompanies(): List<CompanyEntity>
+        + searchCompanies(name: String): List<CompanyEntity>
+        + createCompany(company: CompanyEntity): Long
+        + updateCompany(company: CompanyEntity): Boolean
+        + deleteCompany(id: Long): Boolean
+    }
+
+    interface EmployerProfileDao {
+        + createProfile(profile: EmployerProfileEntity): Long
+        + getProfile(id: Long): EmployerProfileEntity?
+        + getProfileByUserId(userId: Long): EmployerProfileEntity?
+        + updateProfile(profile: EmployerProfileEntity): Boolean
+        + deleteProfile(id: Long): Boolean
+    }
+
+    interface VacancyDao {
+        + createVacancy(vacancy: VacancyEntity): Long
+        + getVacancy(id: Long): VacancyEntity?
+        + updateVacancy(vacancy: VacancyEntity): Boolean
+        + deleteVacancy(id: Long): Boolean
+        + getVacancies(filter, limit, offset): List<VacancyEntity>
+        + getEmployerVacancies(userId, limit, offset)
+        + getCompanyVacancies(companyId, limit, offset)
+        + getRecentVacancies(limit: Int)
+        + updateStatus(id: Long, status: VacancyStatusCode)
+    }
+
+    interface ApplicationDao {
+        + createApplication(app: ApplicationEntity): Long
+        + getApplication(id: Long): ApplicationEntity?
+        + updateApplication(app: ApplicationEntity): Boolean
+        + deleteApplication(id: Long): Boolean
+        + updateStatus(id, statusCode: ApplicationStatusCode)
+        + getMyApplications(seekerId, filter, limit, offset)
+        + getVacancyApplications(vacancyId, limit, offset)
+        + hasApplied(vacancyId, seekerId): Boolean
+    }
+
+    interface RefreshTokenDao {
+        + createToken(token: RefreshTokenEntity): Long
+        + getToken(token: String): RefreshTokenEntity?
+        + deleteToken(token: String): Boolean
+        + deleteUserTokens(userId: Long): Boolean
+    }
+}
+
+' ==================== RELATIONSHIPS ====================
+' Table to Entity
+UserTable ..> UserEntity : maps to
+SeekerProfileTable ..> SeekerProfileEntity : maps to
+WorkExperienceTable ..> WorkExperienceEntity : maps to
+CompanyTable ..> CompanyEntity : maps to
+EmployerProfileTable ..> EmployerProfileEntity : maps to
+VacancyTable ..> VacancyEntity : maps to
+ApplicationTable ..> ApplicationEntity : maps to
+RefreshTokenTable ..> RefreshTokenEntity : maps to
+
+' DAO to Table
+UserDao ..> UserTable : uses
+SeekerProfileDao ..> SeekerProfileTable : uses
+WorkExperienceDao ..> WorkExperienceTable : uses
+CompanyDao ..> CompanyTable : uses
+EmployerProfileDao ..> EmployerProfileTable : uses
+VacancyDao ..> VacancyTable : uses
+ApplicationDao ..> ApplicationTable : uses
+RefreshTokenDao ..> RefreshTokenTable : uses
+
+' Foreign Key References
+SeekerProfileTable --> UserTable : user_id FK
+WorkExperienceTable --> SeekerProfileTable : profile_id FK
+EmployerProfileTable --> UserTable : user_id FK
+EmployerProfileTable --> CompanyTable : company_id FK
+VacancyTable --> CompanyTable : company_id FK
+ApplicationTable --> VacancyTable : vacancy_id FK CASCADE
+ApplicationTable --> SeekerProfileTable : job_seeker_id FK CASCADE
+
+@enduml

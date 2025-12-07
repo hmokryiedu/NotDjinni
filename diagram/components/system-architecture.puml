@@ -1,0 +1,246 @@
+@startuml NotDjinni System Architecture
+
+skinparam component {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam interface {
+    BackgroundColor LightBlue
+    BorderColor Blue
+}
+
+skinparam package {
+    BackgroundColor WhiteSmoke
+    BorderColor Gray
+}
+
+skinparam database {
+    BackgroundColor LightGreen
+    BorderColor DarkGreen
+}
+
+title NotDjinni - System Architecture (Component Diagram)
+
+' ==================== PRESENTATION LAYER ====================
+package "Presentation Layer" {
+    component [Ktor HTTP Server] as HttpServer
+    component [JWT Authentication] as JwtAuth
+    component [DefaultRouter] as Router
+
+    package "Routes" {
+        component [AuthRoute] as AR
+        component [UserRoute] as UR
+        component [SeekerRoute] as SR
+        component [CompanyRoute] as CR
+        component [EmployerRoute] as ER
+        component [VacancyRoute] as VR
+        component [ApplicationRoute] as APR
+        component [TokenRoute] as TR
+    }
+
+    package "DTOs" {
+        component [Request DTOs] as ReqDTO
+        component [Response DTOs] as ResDTO
+    }
+
+    package "Resources" {
+        component [Ktor Resources\n(@Resource)] as Resources
+    }
+
+    component [Error Handlers] as ErrHandler
+}
+
+' ==================== DOMAIN LAYER ====================
+package "Domain Layer" {
+    interface "UserRepository" as IUserRepo
+    interface "AuthRepository" as IAuthRepo
+    interface "SeekerProfileRepository" as ISeekerRepo
+    interface "CompanyRepository" as ICompanyRepo
+    interface "EmployerProfileRepository" as IEmployerRepo
+    interface "VacancyRepository" as IVacancyRepo
+    interface "ApplicationRepository" as IAppRepo
+
+    package "Exceptions" {
+        component [AuthException] as AuthEx
+        component [UserException] as UserEx
+        component [SeekerProfileException] as SeekerEx
+        component [CompanyException] as CompEx
+        component [EmployerProfileException] as EmpEx
+        component [VacancyException] as VacEx
+        component [ApplicationException] as AppEx
+    }
+
+    component [Domain Models] as DomainModels
+}
+
+' ==================== DATA LAYER ====================
+package "Data Layer" {
+    component [DefaultUserRepository] as UserRepo
+    component [DefaultAuthRepository] as AuthRepo
+    component [DefaultSeekerProfileRepository] as SeekerRepo
+    component [DefaultCompanyRepository] as CompanyRepo
+    component [DefaultEmployerProfileRepository] as EmployerRepo
+    component [DefaultVacancyRepository] as VacancyRepo
+    component [DefaultApplicationRepository] as AppRepo
+
+    component [Entity Mappers] as Mappers
+}
+
+' ==================== DATABASE LAYER ====================
+package "Database Layer" {
+    interface "UserDao" as IUserDao
+    interface "SeekerProfileDao" as ISeekerDao
+    interface "WorkExperienceDao" as IWorkExpDao
+    interface "CompanyDao" as ICompanyDao
+    interface "EmployerProfileDao" as IEmployerDao
+    interface "VacancyDao" as IVacancyDao
+    interface "ApplicationDao" as IAppDao
+    interface "RefreshTokenDao" as ITokenDao
+
+    component [DAO Implementations] as DAOImpl
+    component [Exposed Tables] as Tables
+    component [Entity Classes] as Entities
+
+    component [NotDjinniDatabase] as DBInit
+}
+
+' ==================== CROSS-CUTTING ====================
+package "Cross-Cutting Concerns" {
+    component [Koin DI Container] as Koin
+    component [kotlinx.serialization] as Serialization
+    component [Coroutines Runtime] as Coroutines
+    component [TokenProvider] as TokenProvider
+}
+
+' ==================== EXTERNAL ====================
+database "PostgreSQL" as PostgreSQL
+
+' ==================== RELATIONSHIPS ====================
+
+' HTTP Flow
+HttpServer --> Router
+HttpServer --> JwtAuth
+Router --> AR
+Router --> UR
+Router --> SR
+Router --> CR
+Router --> ER
+Router --> VR
+Router --> APR
+Router --> TR
+
+' Routes use Resources and DTOs
+AR ..> Resources
+AR ..> ReqDTO
+AR ..> ResDTO
+UR ..> Resources
+SR ..> Resources
+CR ..> Resources
+ER ..> Resources
+VR ..> Resources
+APR ..> Resources
+
+' Routes depend on Repository Interfaces (Domain)
+AR --> IAuthRepo
+UR --> IUserRepo
+SR --> ISeekerRepo
+CR --> ICompanyRepo
+ER --> IEmployerRepo
+VR --> IVacancyRepo
+APR --> IAppRepo
+
+' Routes use Error Handlers
+AR --> ErrHandler
+UR --> ErrHandler
+SR --> ErrHandler
+ErrHandler ..> AuthEx
+ErrHandler ..> UserEx
+ErrHandler ..> SeekerEx
+ErrHandler ..> CompEx
+ErrHandler ..> EmpEx
+ErrHandler ..> VacEx
+ErrHandler ..> AppEx
+
+' Data Layer implements Domain Interfaces
+UserRepo ..|> IUserRepo
+AuthRepo ..|> IAuthRepo
+SeekerRepo ..|> ISeekerRepo
+CompanyRepo ..|> ICompanyRepo
+EmployerRepo ..|> IEmployerRepo
+VacancyRepo ..|> IVacancyRepo
+AppRepo ..|> IAppRepo
+
+' Data Layer uses DAOs
+UserRepo --> IUserDao
+AuthRepo --> IUserDao
+AuthRepo --> ITokenDao
+AuthRepo --> TokenProvider
+SeekerRepo --> ISeekerDao
+SeekerRepo --> IWorkExpDao
+CompanyRepo --> ICompanyDao
+EmployerRepo --> IEmployerDao
+EmployerRepo --> ICompanyDao
+VacancyRepo --> IVacancyDao
+VacancyRepo --> IEmployerDao
+VacancyRepo --> ICompanyDao
+AppRepo --> IAppDao
+AppRepo --> ISeekerDao
+AppRepo --> IVacancyDao
+
+' Data Layer uses Mappers
+UserRepo --> Mappers
+SeekerRepo --> Mappers
+CompanyRepo --> Mappers
+EmployerRepo --> Mappers
+VacancyRepo --> Mappers
+AppRepo --> Mappers
+
+' DAO uses Tables and Entities
+DAOImpl ..|> IUserDao
+DAOImpl ..|> ISeekerDao
+DAOImpl ..|> IWorkExpDao
+DAOImpl ..|> ICompanyDao
+DAOImpl ..|> IEmployerDao
+DAOImpl ..|> IVacancyDao
+DAOImpl ..|> IAppDao
+DAOImpl ..|> ITokenDao
+
+DAOImpl --> Tables
+DAOImpl --> Entities
+
+' Database connection
+Tables --> DBInit
+DBInit --> PostgreSQL
+
+' Cross-cutting dependencies
+Koin --> Router
+Koin --> UserRepo
+Koin --> AuthRepo
+Koin --> SeekerRepo
+Koin --> CompanyRepo
+Koin --> EmployerRepo
+Koin --> VacancyRepo
+Koin --> AppRepo
+Koin --> DAOImpl
+
+Serialization --> ReqDTO
+Serialization --> ResDTO
+
+Coroutines --> DAOImpl
+Coroutines --> UserRepo
+
+note right of PostgreSQL
+  Tables:
+  - users
+  - job_seeker_profiles
+  - work_experiences
+  - companies
+  - employer_profiles
+  - vacancies
+  - applications
+  - refresh_tokens
+end note
+
+@enduml

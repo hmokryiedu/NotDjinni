@@ -1,0 +1,66 @@
+@startuml User Login Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - User Login Activity Diagram
+
+|User|
+start
+:Enter email and password;
+:Submit login form;
+
+|System|
+:Receive POST /auth/login;
+:Parse LoginRequest;
+
+|Database|
+:SELECT user WHERE email = ?;
+
+|System|
+if (User found?) then (yes)
+    :Get stored password hash;
+    :Verify password with BCrypt;
+
+    if (Password matches?) then (yes)
+        :Generate JWT access token\n(contains userId, expires in 15min);
+        :Generate JWT refresh token\n(expires in 7 days);
+
+        |Database|
+        :INSERT INTO refresh_tokens\n(userId, token, expiresAt);
+
+        |System|
+        :Build AuthResponse with tokens;
+
+        |User|
+        :Receive access_token and refresh_token;
+        :Store tokens in secure storage;
+        :Set Authorization header for future requests;
+        :Navigate to home/dashboard;
+        stop
+
+    else (no)
+        :Throw InvalidCredentials;
+        |User|
+        :Display "Invalid credentials" error;
+        :Clear password field;
+        stop
+    endif
+
+else (no)
+    :Throw InvalidCredentials;
+    note right
+        Same error message for
+        "user not found" and
+        "wrong password" to
+        prevent user enumeration
+    end note
+    |User|
+    :Display "Invalid credentials" error;
+    stop
+endif
+
+@enduml

@@ -1,0 +1,156 @@
+@startuml Employer System Collaboration
+
+skinparam object {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam actor {
+    BackgroundColor LightBlue
+    BorderColor Blue
+}
+
+title NotDjinni - Employer System Collaboration Diagram
+
+' ==================== ACTORS ====================
+actor "Employer" as EMP
+
+' ==================== ROUTES ====================
+object "AuthRoute" as AuthR {
+    /auth/register
+    /auth/login
+    /auth/refresh
+}
+
+object "CompanyRoute" as CompR {
+    /company
+    /company/{id}
+    /company/search
+}
+
+object "EmployerRoute" as EmpR {
+    /employer/profile
+    /employer/vacancies
+}
+
+object "VacancyRoute" as VacR {
+    /vacancy
+    /vacancy/{id}
+    /vacancy/{id}/status
+}
+
+object "ApplicationRoute" as AppR {
+    /application/vacancy/{id}
+    /application/{id}
+    /application/{id}/status
+}
+
+' ==================== REPOSITORIES ====================
+object "AuthRepository" as AuthRepo {
+    register()
+    login()
+    refresh()
+}
+
+object "CompanyRepository" as CompRepo {
+    getCompany()
+    getAllCompanies()
+    searchCompanies()
+    createCompany()
+}
+
+object "EmployerProfileRepository" as EmpRepo {
+    getProfile()
+    createProfile()
+    updateProfile()
+    deleteProfile()
+}
+
+object "VacancyRepository" as VacRepo {
+    createVacancy()
+    updateVacancy()
+    deleteVacancy()
+    updateVacancyStatus()
+    getEmployerVacancies()
+}
+
+object "ApplicationRepository" as AppRepo {
+    getVacancyApplications()
+    getApplication()
+    updateApplicationStatus()
+}
+
+' ==================== INTERACTIONS ====================
+
+' Authentication flow
+EMP -- AuthR : "1. Register/Login"
+AuthR -- AuthRepo : "2. Auth operations"
+
+' Company setup flow
+EMP -- CompR : "3. Find/Create Company"
+CompR -- CompRepo : "4. Company operations"
+
+' Employer profile flow
+EMP -- EmpR : "5. Create Employer Profile"
+EmpR -- EmpRepo : "6. Link to Company"
+
+' Vacancy management flow
+EMP -- VacR : "7. Post Vacancy"
+VacR -- VacRepo : "8. Create/Update Vacancy"
+
+' View own vacancies
+EMP -- EmpR : "9. View My Vacancies"
+EmpR -- VacRepo : "10. Get Company Vacancies"
+
+' Vacancy status management
+EMP -- VacR : "11. Update Vacancy Status"
+VacR -- VacRepo : "12. ACTIVE/PAUSED/CLOSED"
+
+' Application review flow
+EMP -- AppR : "13. Review Applications"
+AppR -- AppRepo : "14. Get Vacancy Applications"
+
+' Application status update
+EMP -- AppR : "15. Update App Status"
+AppR -- AppRepo : "16. REVIEWING/INTERVIEW/OFFER/HIRED/REJECTED"
+
+' ==================== NOTES ====================
+
+note right of EMP
+  Employer Workflow:
+  1. Register & Login
+  2. Find or create company
+  3. Create employer profile
+     (linked to company)
+  4. Post job vacancies
+  5. Manage vacancy status
+  6. Review applications
+  7. Update application status
+  8. Hire candidates
+end note
+
+note bottom of EmpRepo
+  Employer Profile:
+  - companyId (IMMUTABLE)
+  - role (mutable)
+
+  One user can be both
+  Job Seeker AND Employer
+end note
+
+note bottom of VacRepo
+  Vacancy auto-linked to
+  employer's company.
+
+  Only employers from same
+  company can modify.
+end note
+
+note bottom of AppRepo
+  Authorization check:
+  employer.companyId ==
+  vacancy.companyId
+end note
+
+@enduml

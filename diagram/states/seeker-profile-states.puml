@@ -1,0 +1,91 @@
+@startuml Seeker Profile State Machine
+
+skinparam state {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Job Seeker Profile State Diagram
+
+[*] --> NO_PROFILE : user registers
+
+state NO_PROFILE {
+    NO_PROFILE : User has no seeker profile
+    NO_PROFILE : Cannot apply to vacancies
+}
+
+state ACTIVE {
+    ACTIVE : Profile is complete
+    ACTIVE : Can apply to vacancies
+    ACTIVE : Can manage work experiences
+}
+
+state UPDATING {
+    UPDATING : Profile being modified
+    UPDATING : Validation in progress
+}
+
+state DELETED {
+    DELETED : Profile removed
+    DELETED : Applications cascade deleted
+}
+
+' Create profile flow
+NO_PROFILE --> ACTIVE : POST /seeker/profile\n[createProfile]
+
+' Update profile flow
+ACTIVE --> UPDATING : PUT /seeker/profile\n[updateProfile]
+UPDATING --> ACTIVE : save successful
+
+' Delete profile flow
+ACTIVE --> DELETED : DELETE /seeker/profile\n[deleteProfile]
+DELETED --> [*]
+
+' Work experience management (within ACTIVE state)
+state ACTIVE {
+    state "Managing Experiences" as MgmtExp {
+        [*] --> Viewing
+        Viewing --> Adding : POST experience
+        Adding --> Viewing : added
+        Viewing --> Editing : PUT experience/{id}
+        Editing --> Viewing : updated
+        Viewing --> Removing : DELETE experience/{id}
+        Removing --> Viewing : deleted
+    }
+}
+
+note right of NO_PROFILE
+  Initial state after
+  user registration
+
+  User can be:
+  - Job Seeker (create seeker profile)
+  - Employer (create employer profile)
+  - Both (create both profiles)
+end note
+
+note right of ACTIVE
+  Profile fields:
+  - speciality
+  - experienceYears
+  - desiredSalary
+  - aboutMe
+  - jobCategory
+  - workExperience[]
+end note
+
+note left of UPDATING
+  Validation rules:
+  - Required fields present
+  - Valid job category
+  - Positive salary/years
+end note
+
+note bottom of DELETED
+  CASCADE DELETE:
+  All applications by this
+  seeker are also deleted
+end note
+
+@enduml

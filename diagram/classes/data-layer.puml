@@ -1,0 +1,252 @@
+@startuml NotDjinni Data Layer
+
+skinparam class {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam interface {
+    BackgroundColor LightBlue
+    BorderColor Blue
+    FontSize 11
+}
+
+title NotDjinni - Data Layer (Repositories & Exceptions)
+
+' ==================== REPOSITORY INTERFACES (DOMAIN) ====================
+package "Domain Repository Interfaces" <<Rectangle>> {
+    interface UserRepository {
+        + getUser(userId: Long): Result<User>
+    }
+
+    interface AuthRepository {
+        + register(email, password): Result<AuthTokens>
+        + login(email, password): Result<AuthTokens>
+        + refresh(refreshToken): Result<AuthTokens>
+        + logout(refreshToken): Result<Unit>
+    }
+
+    interface SeekerProfileRepository {
+        + getProfile(userId: Long): Result<SeekerProfile>
+        + createProfile(userId, profile): Result<SeekerProfile>
+        + updateProfile(userId, profile): Result<Unit>
+        + deleteProfile(userId: Long): Result<Unit>
+        + addWorkExperience(userId, exp): Result<Long>
+        + updateWorkExperience(userId, expId, exp): Result<Unit>
+        + deleteWorkExperience(userId, expId): Result<Unit>
+    }
+
+    interface CompanyRepository {
+        + getCompany(id: Long): Result<Company>
+        + getAllCompanies(): Result<List<Company>>
+        + searchCompanies(name: String): Result<List<Company>>
+        + createCompany(company): Result<Company>
+        + updateCompany(company): Result<Unit>
+        + deleteCompany(id: Long): Result<Unit>
+    }
+
+    interface EmployerProfileRepository {
+        + getProfile(userId: Long): Result<EmployerProfileWithCompany>
+        + createProfile(userId, profile): Result<EmployerProfileWithCompany>
+        + updateProfile(userId, role: String): Result<Unit>
+        + deleteProfile(userId: Long): Result<Unit>
+    }
+
+    interface VacancyRepository {
+        + createVacancy(userId, vacancy): Result<VacancyWithDetails>
+        + getVacancy(id: Long): Result<Vacancy>
+        + getVacancyWithDetails(id): Result<VacancyWithDetails>
+        + updateVacancy(userId, vacancy): Result<Unit>
+        + deleteVacancy(userId, id): Result<Unit>
+        + getVacancies(filter, limit, offset): Result<List>
+        + countVacancies(filter): Result<Int>
+        + getEmployerVacancies(userId, limit, offset): Result<List>
+        + getCompanyVacancies(companyId, limit, offset): Result<List>
+        + getRecentVacancies(limit): Result<List>
+        + updateVacancyStatus(userId, id, status): Result<Unit>
+    }
+
+    interface ApplicationRepository {
+        + createApplication(userId, app): Result<Application>
+        + getApplication(userId, id): Result<ApplicationWithDetails>
+        + updateApplication(userId, app): Result<Unit>
+        + deleteApplication(userId, id): Result<Unit>
+        + updateApplicationStatus(userId, id, status): Result<Unit>
+        + getMyApplications(userId, filter, limit, offset): Result<List>
+        + getVacancyApplications(userId, vacancyId, limit, offset): Result<List>
+        + hasApplied(userId, vacancyId): Result<Boolean>
+    }
+}
+
+' ==================== REPOSITORY IMPLEMENTATIONS (DATA) ====================
+package "Data Repository Implementations" <<Rectangle>> {
+    class DefaultUserRepository {
+        - userDao: UserDao
+        --
+        + getUser(userId: Long): Result<User>
+    }
+
+    class DefaultAuthRepository {
+        - userDao: UserDao
+        - refreshTokenDao: RefreshTokenDao
+        - tokenProvider: TokenProvider
+        --
+        + register(email, password): Result<AuthTokens>
+        + login(email, password): Result<AuthTokens>
+        + refresh(refreshToken): Result<AuthTokens>
+        + logout(refreshToken): Result<Unit>
+    }
+
+    class DefaultSeekerProfileRepository {
+        - seekerProfileDao: SeekerProfileDao
+        - workExperienceDao: WorkExperienceDao
+        --
+        + getProfile(userId: Long): Result<SeekerProfile>
+        + createProfile(userId, profile): Result<SeekerProfile>
+        + updateProfile(userId, profile): Result<Unit>
+        + deleteProfile(userId: Long): Result<Unit>
+        + addWorkExperience(userId, exp): Result<Long>
+        + updateWorkExperience(userId, expId, exp): Result<Unit>
+        + deleteWorkExperience(userId, expId): Result<Unit>
+    }
+
+    class DefaultCompanyRepository {
+        - companyDao: CompanyDao
+        --
+        + getCompany(id: Long): Result<Company>
+        + getAllCompanies(): Result<List<Company>>
+        + searchCompanies(name: String): Result<List<Company>>
+        + createCompany(company): Result<Company>
+        + updateCompany(company): Result<Unit>
+        + deleteCompany(id: Long): Result<Unit>
+    }
+
+    class DefaultEmployerProfileRepository {
+        - employerProfileDao: EmployerProfileDao
+        - companyDao: CompanyDao
+        --
+        + getProfile(userId): Result<EmployerProfileWithCompany>
+        + createProfile(userId, profile): Result<EmployerProfileWithCompany>
+        + updateProfile(userId, role): Result<Unit>
+        + deleteProfile(userId): Result<Unit>
+    }
+
+    class DefaultVacancyRepository {
+        - vacancyDao: VacancyDao
+        - employerProfileDao: EmployerProfileDao
+        - companyDao: CompanyDao
+        --
+        + createVacancy(userId, vacancy): Result<VacancyWithDetails>
+        + getVacancy(id): Result<Vacancy>
+        + getVacancyWithDetails(id): Result<VacancyWithDetails>
+        + updateVacancy(userId, vacancy): Result<Unit>
+        + deleteVacancy(userId, id): Result<Unit>
+        + getVacancies(filter, limit, offset): Result<List>
+        + updateVacancyStatus(userId, id, status): Result<Unit>
+    }
+
+    class DefaultApplicationRepository {
+        - applicationDao: ApplicationDao
+        - seekerProfileDao: SeekerProfileDao
+        - vacancyDao: VacancyDao
+        - employerProfileDao: EmployerProfileDao
+        --
+        + createApplication(userId, app): Result<Application>
+        + getApplication(userId, id): Result<ApplicationWithDetails>
+        + updateApplication(userId, app): Result<Unit>
+        + deleteApplication(userId, id): Result<Unit>
+        + updateApplicationStatus(userId, id, status): Result<Unit>
+        + getMyApplications(userId, filter, limit, offset): Result<List>
+        + getVacancyApplications(userId, vacancyId, limit, offset): Result<List>
+        + hasApplied(userId, vacancyId): Result<Boolean>
+    }
+}
+
+' ==================== EXCEPTIONS (SEALED CLASSES) ====================
+package "Domain Exceptions" <<Rectangle>> {
+    abstract class AuthException <<sealed>> {
+        + message: String
+    }
+    class "AuthException.UserNotFound" as AUF
+    class "AuthException.InvalidCredentials" as AIC
+    class "AuthException.EmailAlreadyInUse" as AEIU
+    class "AuthException.WeakPassword" as AWP
+    class "AuthException.InvalidAccessToken" as AIAT
+    class "AuthException.InvalidRefreshToken" as AIRT
+    class "AuthException.RefreshTokenExpired" as ARTE
+
+    abstract class UserException <<sealed>> {
+        + message: String
+    }
+    class "UserException.NotFound" as UNF
+
+    abstract class SeekerProfileException <<sealed>> {
+        + message: String
+    }
+    class "SeekerProfileException.ProfileNotFound" as SPNF
+    class "SeekerProfileException.ProfileAlreadyExists" as SPAE
+    class "SeekerProfileException.WorkExperienceNotFound" as SWENF
+    class "SeekerProfileException.Unauthorized" as SU
+    class "SeekerProfileException.InvalidProfileData" as SIPD
+
+    abstract class CompanyException <<sealed>> {
+        + message: String
+    }
+    class "CompanyException.CompanyNotFound" as CNF
+    class "CompanyException.CompanyAlreadyExists" as CAE
+    class "CompanyException.InvalidCompanyData" as CID
+
+    abstract class EmployerProfileException <<sealed>> {
+        + message: String
+    }
+    class "EmployerProfileException.ProfileNotFound" as EPNF
+    class "EmployerProfileException.ProfileAlreadyExists" as EPAE
+    class "EmployerProfileException.CompanyNotFound" as ECNF
+    class "EmployerProfileException.Unauthorized" as EU
+}
+
+' ==================== RELATIONSHIPS ====================
+' Interface-Implementation bindings
+DefaultUserRepository ..|> UserRepository
+DefaultAuthRepository ..|> AuthRepository
+DefaultSeekerProfileRepository ..|> SeekerProfileRepository
+DefaultCompanyRepository ..|> CompanyRepository
+DefaultEmployerProfileRepository ..|> EmployerProfileRepository
+DefaultVacancyRepository ..|> VacancyRepository
+DefaultApplicationRepository ..|> ApplicationRepository
+
+' Exception hierarchies
+AUF --|> AuthException
+AIC --|> AuthException
+AEIU --|> AuthException
+AWP --|> AuthException
+AIAT --|> AuthException
+AIRT --|> AuthException
+ARTE --|> AuthException
+
+UNF --|> UserException
+
+SPNF --|> SeekerProfileException
+SPAE --|> SeekerProfileException
+SWENF --|> SeekerProfileException
+SU --|> SeekerProfileException
+SIPD --|> SeekerProfileException
+
+CNF --|> CompanyException
+CAE --|> CompanyException
+CID --|> CompanyException
+
+EPNF --|> EmployerProfileException
+EPAE --|> EmployerProfileException
+ECNF --|> EmployerProfileException
+EU --|> EmployerProfileException
+
+' Repository dependencies (throws exceptions)
+DefaultAuthRepository ..> AuthException : throws
+DefaultUserRepository ..> UserException : throws
+DefaultSeekerProfileRepository ..> SeekerProfileException : throws
+DefaultCompanyRepository ..> CompanyException : throws
+DefaultEmployerProfileRepository ..> EmployerProfileException : throws
+
+@enduml

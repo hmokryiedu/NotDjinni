@@ -1,0 +1,140 @@
+@startuml Application Review Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Application Review Activity Diagram
+
+|Employer|
+start
+:Access applications for vacancy;
+
+|System|
+:Verify JWT authentication;
+:Extract userId from token;
+
+|Database|
+:SELECT employer_profile WHERE user_id = ?;
+
+|System|
+if (Has employer profile?) then (yes)
+    :Get companyId from profile;
+
+    |Employer|
+    :Select vacancy to review;
+
+    |System|
+    :GET /application/vacancy/{vacancyId};
+
+    |Database|
+    :SELECT vacancy WHERE id = ?;
+
+    |System|
+    if (Company owns vacancy?) then (yes)
+        |Database|
+        :SELECT applications\nWITH seeker profiles\nWHERE vacancy_id = ?;
+
+        |System|
+        :Return ApplicationWithDetails list;
+
+        |Employer|
+        :View applications list;
+        :See candidate profiles;
+        :Select application to review;
+
+        |System|
+        :GET /application/{id};
+
+        |Employer|
+        :View full application details;
+        :Review cover letter;
+        :Review seeker profile;
+        :Review work experience;
+
+        switch (Update Status?)
+        case (Start Review)
+            |System|
+            :PUT /application/{id}/status\nstatus=REVIEWING;
+
+            |Database|
+            :UPDATE applications SET status = 'REVIEWING';
+
+            |Employer|
+            :Application marked as reviewing;
+
+        case (Schedule Interview)
+            |System|
+            :PUT /application/{id}/status\nstatus=INTERVIEW;
+
+            |Database|
+            :UPDATE applications SET status = 'INTERVIEW';
+
+            |Employer|
+            :Schedule interview externally;
+            :Application marked for interview;
+
+        case (Assign Test Task)
+            |System|
+            :PUT /application/{id}/status\nstatus=TEST_TASK;
+
+            |Database|
+            :UPDATE applications SET status = 'TEST_TASK';
+
+            |Employer|
+            :Send test task externally;
+            :Application marked with test;
+
+        case (Extend Offer)
+            |System|
+            :PUT /application/{id}/status\nstatus=OFFER;
+
+            |Database|
+            :UPDATE applications SET status = 'OFFER';
+
+            |Employer|
+            :Prepare and send offer;
+            :Application marked with offer;
+
+        case (Mark as Hired)
+            |System|
+            :PUT /application/{id}/status\nstatus=HIRED;
+
+            |Database|
+            :UPDATE applications SET status = 'HIRED';
+
+            |Employer|
+            :Candidate hired!;
+            :Consider closing vacancy;
+
+        case (Reject Application)
+            |System|
+            :PUT /application/{id}/status\nstatus=REJECTED;
+
+            |Database|
+            :UPDATE applications SET status = 'REJECTED';
+
+            |Employer|
+            :Application rejected;
+            :Optionally send feedback;
+
+        endswitch
+
+    else (no)
+        |Employer|
+        :Show "Not authorized" error;
+        :Cannot view other company's applications;
+        stop
+    endif
+
+else (no)
+    |Employer|
+    :Show "Create employer profile first";
+    stop
+endif
+
+stop
+
+@enduml

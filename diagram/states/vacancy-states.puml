@@ -1,0 +1,80 @@
+@startuml Vacancy State Machine
+
+skinparam state {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Vacancy Status State Diagram
+
+[*] --> DRAFT : createVacancy(status=DRAFT)
+
+state DRAFT {
+    DRAFT : Vacancy created but not visible
+    DRAFT : Employer can edit all fields
+}
+
+state ACTIVE {
+    ACTIVE : Vacancy visible to job seekers
+    ACTIVE : Accepting applications
+}
+
+state PAUSED {
+    PAUSED : Temporarily hidden
+    PAUSED : Not accepting new applications
+}
+
+state CLOSED {
+    CLOSED : Permanently closed
+    CLOSED : Position filled or cancelled
+}
+
+state EXPIRED {
+    EXPIRED : Auto-expired by system
+    EXPIRED : Exceeded time limit
+}
+
+' Transitions from DRAFT
+DRAFT --> ACTIVE : publish\n[employer action]
+DRAFT --> CLOSED : close\n[employer action]
+
+' Transitions from ACTIVE
+ACTIVE --> PAUSED : pause\n[employer action]
+ACTIVE --> CLOSED : close\n[employer action]
+ACTIVE --> EXPIRED : expire\n[system timer]
+
+' Transitions from PAUSED
+PAUSED --> ACTIVE : resume\n[employer action]
+PAUSED --> CLOSED : close\n[employer action]
+
+' Final states
+CLOSED --> [*]
+EXPIRED --> [*]
+
+note right of DRAFT
+  Initial state when vacancy
+  is first created
+end note
+
+note right of ACTIVE
+  Main operational state
+  Job seekers can apply
+end note
+
+note left of PAUSED
+  Employer temporarily
+  hides the vacancy
+end note
+
+note bottom of CLOSED
+  Final state:
+  No more applications
+end note
+
+note bottom of EXPIRED
+  Final state:
+  Auto-closed by system
+end note
+
+@enduml

@@ -1,0 +1,152 @@
+@startuml Seeker Profile Management Flow
+
+skinparam activity {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 12
+}
+
+title NotDjinni - Job Seeker Profile Management Activity Diagram
+
+|Job Seeker|
+start
+:Access profile section;
+
+|System|
+:Verify JWT authentication;
+
+if (JWT valid?) then (yes)
+    :Extract userId from token;
+
+    |Job Seeker|
+    switch (Choose action?)
+    case (View Profile)
+        |System|
+        :GET /seeker/profile;
+
+        |Database|
+        :SELECT profile WHERE user_id = ?;
+        :SELECT experiences WHERE profile_id = ?;
+
+        |System|
+        if (Profile exists?) then (yes)
+            :Map to SeekerProfileResponse;
+            |Job Seeker|
+            :Display profile with work experiences;
+        else (no)
+            |Job Seeker|
+            :Show "Create Profile" prompt;
+        endif
+
+    case (Create Profile)
+        |Job Seeker|
+        :Fill profile form\n(speciality, salary, experience, etc.);
+        :Add work experiences;
+        :Submit;
+
+        |System|
+        :POST /seeker/profile;
+        :Validate profile data;
+
+        |Database|
+        :Check profile not exists;
+
+        |System|
+        if (Profile exists?) then (yes)
+            |Job Seeker|
+            :Show "Profile already exists" error;
+        else (no)
+            |Database|
+            :INSERT INTO job_seeker_profiles;
+            :INSERT INTO work_experiences (batch);
+
+            |Job Seeker|
+            :Display success message;
+            :Show created profile;
+        endif
+
+    case (Update Profile)
+        |Job Seeker|
+        :Modify profile fields;
+        :Submit changes;
+
+        |System|
+        :PUT /seeker/profile;
+        :Validate updated data;
+
+        |Database|
+        :UPDATE job_seeker_profiles;
+
+        |Job Seeker|
+        :Display "Profile updated" message;
+
+    case (Add Experience)
+        |Job Seeker|
+        :Fill experience form;
+        :Submit;
+
+        |System|
+        :POST /seeker/profile/experience;
+
+        |Database|
+        :INSERT INTO work_experiences;
+        :Return experience_id;
+
+        |Job Seeker|
+        :Display added experience;
+
+    case (Update Experience)
+        |Job Seeker|
+        :Edit experience details;
+        :Submit;
+
+        |System|
+        :PUT /seeker/profile/experience/{id};
+        :Verify ownership;
+
+        |Database|
+        :UPDATE work_experiences WHERE id = ?;
+
+        |Job Seeker|
+        :Display updated experience;
+
+    case (Delete Experience)
+        |Job Seeker|
+        :Confirm deletion;
+
+        |System|
+        :DELETE /seeker/profile/experience/{id};
+        :Verify ownership;
+
+        |Database|
+        :DELETE FROM work_experiences WHERE id = ?;
+
+        |Job Seeker|
+        :Remove experience from view;
+
+    case (Delete Profile)
+        |Job Seeker|
+        :Confirm profile deletion;
+
+        |System|
+        :DELETE /seeker/profile;
+
+        |Database|
+        :DELETE work_experiences WHERE profile_id = ?;
+        :DELETE job_seeker_profiles WHERE user_id = ?;
+        :DELETE applications WHERE job_seeker_id = ? (CASCADE);
+
+        |Job Seeker|
+        :Display "Profile deleted" message;
+        :Redirect to create profile;
+
+    endswitch
+
+else (no)
+    |Job Seeker|
+    :Redirect to login;
+endif
+
+stop
+
+@enduml

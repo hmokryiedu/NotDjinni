@@ -1,0 +1,102 @@
+@startuml Registration Sequence
+
+skinparam participant {
+    BackgroundColor LightYellow
+    BorderColor Gray
+    FontSize 11
+}
+
+skinparam database {
+    BackgroundColor LightGreen
+    BorderColor DarkGreen
+}
+
+title NotDjinni - User Registration Sequence Diagram
+
+actor "Client" as Client
+participant "AuthRoute" as AR
+participant "AuthRepository" as Repo
+participant "UserDao" as UDao
+participant "RefreshTokenDao" as TDao
+participant "TokenProvider" as TP
+database "PostgreSQL" as DB
+
+== Registration Request ==
+
+Client -> AR: POST /auth/register\n{email, password}
+activate AR
+
+AR -> AR: Parse RegisterRequest
+
+AR -> Repo: register(email, password)
+activate Repo
+
+== Check Email Uniqueness ==
+
+Repo -> UDao: getUserByEmail(email)
+activate UDao
+
+UDao -> DB: SELECT * FROM users\nWHERE email = ?
+activate DB
+DB --> UDao: null (not found)
+deactivate DB
+
+UDao --> Repo: null
+deactivate UDao
+
+== Validate Password ==
+
+Repo -> Repo: validatePassword(password)
+note right: Check minimum length,\ncomplexity requirements
+
+== Create User ==
+
+Repo -> Repo: hashPassword(password)
+note right: BCrypt hashing
+
+Repo -> UDao: upsertUser(UserEntity)
+activate UDao
+
+UDao -> DB: INSERT INTO users\n(name, email, password)
+activate DB
+DB --> UDao: user_id
+deactivate DB
+
+UDao --> Repo: userId
+deactivate UDao
+
+== Generate Tokens ==
+
+Repo -> TP: generateTokens(userId)
+activate TP
+
+TP -> TP: Create access token\n(RS256, 15min expiry)
+TP -> TP: Create refresh token\n(RS256, 7day expiry)
+
+TP --> Repo: AuthTokens
+deactivate TP
+
+== Store Refresh Token ==
+
+Repo -> TDao: createToken(RefreshTokenEntity)
+activate TDao
+
+TDao -> DB: INSERT INTO refresh_tokens\n(user_id, token, expires_at)
+activate DB
+DB --> TDao: token_id
+deactivate DB
+
+TDao --> Repo: tokenId
+deactivate TDao
+
+== Response ==
+
+Repo --> AR: Result.success(AuthTokens, User)
+deactivate Repo
+
+AR -> AR: Map to AuthResponse
+
+AR --> Client: 201 Created\n{access_token, refresh_token, user}
+deactivate AR
+
+@enduml
