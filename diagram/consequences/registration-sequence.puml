@@ -13,90 +13,49 @@ skinparam database {
 
 title NotDjinni - User Registration Sequence Diagram
 
-actor "Client" as Client
-participant "AuthRoute" as AR
-participant "AuthRepository" as Repo
-participant "UserDao" as UDao
-participant "RefreshTokenDao" as TDao
-participant "TokenProvider" as TP
-database "PostgreSQL" as DB
+actor "User" as User
+participant "System" as System
+database "Database" as DB
 
 == Registration Request ==
 
-Client -> AR: POST /auth/register\n{email, password}
-activate AR
+User -> System: Submit email and password
+activate System
 
-AR -> AR: Parse RegisterRequest
+== Verify Email Uniqueness ==
 
-AR -> Repo: register(email, password)
-activate Repo
-
-== Check Email Uniqueness ==
-
-Repo -> UDao: getUserByEmail(email)
-activate UDao
-
-UDao -> DB: SELECT * FROM users\nWHERE email = ?
+System -> DB: Check if email exists
 activate DB
-DB --> UDao: null (not found)
+DB --> System: Email not found
 deactivate DB
 
-UDao --> Repo: null
-deactivate UDao
+== Validate and Secure ==
 
-== Validate Password ==
+System -> System: Validate email format
+System -> System: Validate password strength
+System -> System: Secure password
 
-Repo -> Repo: validatePassword(password)
-note right: Check minimum length,\ncomplexity requirements
+== Create User Account ==
 
-== Create User ==
-
-Repo -> Repo: hashPassword(password)
-note right: BCrypt hashing
-
-Repo -> UDao: upsertUser(UserEntity)
-activate UDao
-
-UDao -> DB: INSERT INTO users\n(name, email, password)
+System -> DB: Create user account
 activate DB
-DB --> UDao: user_id
+DB --> System: Account created
 deactivate DB
 
-UDao --> Repo: userId
-deactivate UDao
+== Generate Authentication Tokens ==
 
-== Generate Tokens ==
+System -> System: Generate authentication tokens
 
-Repo -> TP: generateTokens(userId)
-activate TP
+== Store Session ==
 
-TP -> TP: Create access token\n(RS256, 15min expiry)
-TP -> TP: Create refresh token\n(RS256, 7day expiry)
-
-TP --> Repo: AuthTokens
-deactivate TP
-
-== Store Refresh Token ==
-
-Repo -> TDao: createToken(RefreshTokenEntity)
-activate TDao
-
-TDao -> DB: INSERT INTO refresh_tokens\n(user_id, token, expires_at)
+System -> DB: Store authentication session
 activate DB
-DB --> TDao: token_id
+DB --> System: Session stored
 deactivate DB
-
-TDao --> Repo: tokenId
-deactivate TDao
 
 == Response ==
 
-Repo --> AR: Result.success(AuthTokens, User)
-deactivate Repo
-
-AR -> AR: Map to AuthResponse
-
-AR --> Client: 201 Created\n{access_token, refresh_token, user}
-deactivate AR
+System --> User: Registration successful\nReceive authentication tokens
+deactivate System
 
 @enduml

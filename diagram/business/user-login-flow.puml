@@ -6,60 +6,35 @@ skinparam activity {
     FontSize 12
 }
 
-title NotDjinni - User Login Activity Diagram
+title NotDjinni - User Login Flow
 
 |User|
 start
 :Enter email and password;
-:Submit login form;
+:Submit login;
 
 |System|
-:Receive POST /auth/login;
-:Parse LoginRequest;
+:Find user account;
 
-|Database|
-:SELECT user WHERE email = ?;
+if (Account exists?) then (yes)
+    :Verify password;
 
-|System|
-if (User found?) then (yes)
-    :Get stored password hash;
-    :Verify password with BCrypt;
-
-    if (Password matches?) then (yes)
-        :Generate JWT access token\n(contains userId, expires in 15min);
-        :Generate JWT refresh token\n(expires in 7 days);
-
-        |Database|
-        :INSERT INTO refresh_tokens\n(userId, token, expiresAt);
-
-        |System|
-        :Build AuthResponse with tokens;
+    if (Password correct?) then (yes)
+        :Generate authentication tokens;
+        :Store session;
 
         |User|
-        :Receive access_token and refresh_token;
-        :Store tokens in secure storage;
-        :Set Authorization header for future requests;
-        :Navigate to home/dashboard;
+        :Receive tokens;
+        :Go to dashboard;
         stop
-
     else (no)
-        :Throw InvalidCredentials;
         |User|
-        :Display "Invalid credentials" error;
-        :Clear password field;
+        :Show error: Invalid credentials;
         stop
     endif
-
 else (no)
-    :Throw InvalidCredentials;
-    note right
-        Same error message for
-        "user not found" and
-        "wrong password" to
-        prevent user enumeration
-    end note
     |User|
-    :Display "Invalid credentials" error;
+    :Show error: Invalid credentials;
     stop
 endif
 

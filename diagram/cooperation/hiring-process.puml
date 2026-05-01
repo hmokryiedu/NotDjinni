@@ -1,0 +1,60 @@
+@startuml Hiring Process Cooperation
+
+skinparam actor {
+    BackgroundColor LightBlue
+    BorderColor Blue
+}
+
+title NotDjinni - Hiring Process Cooperation
+
+' ==================== ACTORS ====================
+actor "Employer" as EMP
+actor "Platform" as PLT
+actor "Job Seeker" as JS
+
+' ==================== COOPERATION FLOW ====================
+
+EMP -> PLT : "1. Post vacancy"
+PLT -> JS : "2. Display vacancy\nin search results"
+JS -> PLT : "3. Submit application\nwith cover letter"
+PLT -> EMP : "4. Notify: New\napplication received"
+
+EMP -> PLT : "5. Update status\nto 'Reviewing'"
+PLT -> JS : "6. Notify: Application\nstatus changed"
+
+EMP -> PLT : "7. Schedule\ninterview"
+PLT -> JS : "8. Send interview\ninvitation"
+JS -> PLT : "9. Confirm\ninterview attendance"
+PLT -> EMP : "10. Notify: Interview\nconfirmed"
+
+EMP -> PLT : "11. Send job offer"
+PLT -> JS : "12. Deliver job offer\ndetails"
+JS -> PLT : "13. Accept offer"
+PLT -> EMP : "14. Notify: Offer\naccepted"
+
+EMP -> PLT : "15. Mark position\nas 'Hired'"
+PLT -> JS : "16. Confirm hiring\nand next steps"
+
+' ==================== NOTES ====================
+
+note right of PLT
+  Platform facilitates
+  cooperation between
+  Employer and Job Seeker
+  throughout the
+  complete hiring process
+end note
+
+note bottom of EMP
+  Employer uses Platform to
+  find candidates and manage
+  the hiring workflow
+end note
+
+note bottom of JS
+  Job Seeker uses Platform
+  to discover opportunities
+  and track applications
+end note
+
+@enduml

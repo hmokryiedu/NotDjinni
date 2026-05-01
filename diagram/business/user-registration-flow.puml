@@ -6,69 +6,45 @@ skinparam activity {
     FontSize 12
 }
 
-title NotDjinni - User Registration Activity Diagram
+title NotDjinni - User Registration Flow
 
 |User|
 start
 :Enter email and password;
-:Submit registration form;
+:Submit registration;
 
 |System|
-:Receive POST /auth/register;
 :Validate email format;
 
-if (Email format valid?) then (yes)
-    :Check email uniqueness;
+if (Valid email?) then (yes)
+    :Check if email exists;
 
-    |Database|
-    :SELECT user WHERE email = ?;
-
-    |System|
-    if (Email already exists?) then (yes)
-        :Throw EmailAlreadyInUse;
+    if (Email already registered?) then (yes)
         |User|
-        :Display "Email already in use" error;
+        :Show error: Email already in use;
         stop
     else (no)
+        |System|
         :Validate password strength;
 
-        if (Password strong enough?) then (yes)
-            :Hash password with BCrypt;
-            :Create User entity;
-
-            |Database|
-            :INSERT INTO users;
-            :Return user_id;
-
-            |System|
-            :Generate JWT access token;
-            :Generate JWT refresh token;
-            :Store refresh token;
-
-            |Database|
-            :INSERT INTO refresh_tokens;
-
-            |System|
-            :Build AuthResponse;
+        if (Strong password?) then (yes)
+            :Secure password;
+            :Create user account;
+            :Generate authentication tokens;
 
             |User|
-            :Receive tokens and user info;
-            :Store tokens locally;
-            :Redirect to dashboard;
+            :Receive tokens;
+            :Go to dashboard;
             stop
-
         else (no)
-            :Throw WeakPassword;
             |User|
-            :Display "Password too weak" error;
+            :Show error: Password too weak;
             stop
         endif
     endif
-
 else (no)
-    :Return validation error;
     |User|
-    :Display "Invalid email format" error;
+    :Show error: Invalid email format;
     stop
 endif
 

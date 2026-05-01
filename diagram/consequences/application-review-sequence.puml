@@ -13,124 +13,71 @@ skinparam database {
 
 title NotDjinni - Application Status Update Sequence Diagram
 
-actor "Client\n(Employer)" as Client
-participant "ApplicationRoute" as AR
-participant "ApplicationRepository" as Repo
-participant "EmployerProfileDao" as EPDao
-participant "ApplicationDao" as ADao
-participant "VacancyDao" as VDao
-database "PostgreSQL" as DB
+actor "Employer" as Employer
+participant "System" as System
+database "Database" as DB
 
-== Authentication ==
+== Status Update Request ==
 
-Client -> AR: PUT /application/{id}/status\n{status: "INTERVIEW"}\nAuthorization: Bearer <JWT>
-activate AR
+Employer -> System: Request status update\n(application_id, new_status)
+activate System
 
-AR -> AR: Extract userId from JWT
+== Get Employer Company ==
+
+System -> DB: Verify employer company
+activate DB
+DB --> System: Company info retrieved
+deactivate DB
+
+alt Employer profile not found
+    System --> Employer: Error: Employer profile not found
+    deactivate System
+end
+
+== Verify Application ==
+
+System -> DB: Retrieve application
+activate DB
+DB --> System: Application found
+deactivate DB
+
+alt Application not found
+    System --> Employer: Error: Application not found
+    deactivate System
+end
+
+== Check Authorization ==
+
+System -> DB: Verify vacancy ownership
+activate DB
+DB --> System: Vacancy info retrieved
+deactivate DB
+
+System -> System: Verify employer authorized for vacancy
+note right: Check if employer's company\nmatches vacancy's company
+
+alt Unauthorized
+    System --> Employer: Error: Not authorized
+    deactivate System
+end
 
 == Update Application Status ==
 
-AR -> Repo: updateApplicationStatus(userId, applicationId, statusCode)
-activate Repo
-
-== Get Employer's Company ==
-
-Repo -> EPDao: getProfileByUserId(userId)
-activate EPDao
-
-EPDao -> DB: SELECT * FROM employer_profiles\nWHERE user_id = ?
+System -> DB: Update status
 activate DB
-DB --> EPDao: EmployerProfileEntity\n(companyId)
+DB --> System: Status updated
 deactivate DB
-
-EPDao --> Repo: EmployerProfileEntity
-deactivate EPDao
-
-note right of Repo
-  employerCompanyId = profile.companyId
-end note
-
-alt Employer profile not found
-    Repo --> AR: Result.failure(EmployerProfileNotFound)
-    AR --> Client: 404 Not Found\n{"error": "Employer profile not found"}
-end
-
-== Get Application ==
-
-Repo -> ADao: getApplication(applicationId)
-activate ADao
-
-ADao -> DB: SELECT * FROM applications\nWHERE id = ?
-activate DB
-DB --> ADao: ApplicationEntity\n(vacancyId)
-deactivate DB
-
-ADao --> Repo: ApplicationEntity
-deactivate ADao
-
-alt Application not found
-    Repo --> AR: Result.failure(ApplicationNotFound)
-    AR --> Client: 404 Not Found\n{"error": "Application not found"}
-end
-
-== Verify Authorization ==
-
-Repo -> VDao: getVacancy(application.vacancyId)
-activate VDao
-
-VDao -> DB: SELECT * FROM vacancies\nWHERE id = ?
-activate DB
-DB --> VDao: VacancyEntity\n(companyId)
-deactivate DB
-
-VDao --> Repo: VacancyEntity
-deactivate VDao
-
-Repo -> Repo: Verify authorization
-note right
-  Check: employerCompanyId == vacancy.companyId
-
-  Only employers from the SAME company
-  that posted the vacancy can update
-  application status
-end note
-
-alt Unauthorized
-    Repo --> AR: Result.failure(Unauthorized)
-    AR --> Client: 403 Forbidden\n{"error": "Not authorized to update\nthis application"}
-end
-
-== Update Status ==
-
-Repo -> ADao: updateStatus(applicationId, statusCode)
-activate ADao
-
-ADao -> DB: UPDATE applications\nSET status = ?, updated_at = NOW()\nWHERE id = ?
-activate DB
-DB --> ADao: 1 (row affected)
-deactivate DB
-
-ADao --> Repo: true
-deactivate ADao
 
 == Response ==
 
-Repo --> AR: Result.success(Unit)
-deactivate Repo
+System --> Employer: Status updated successfully
+deactivate System
 
-AR --> Client: 200 OK\n{"message": "Application status updated"}
-deactivate AR
-
-== Alternative Statuses ==
-
-note over Client, DB
-  Available status transitions:
-
-  APPLIED -> REVIEWING -> INTERVIEW -> OFFER -> HIRED
-                      \-> TEST_TASK -/
-
-  Any state -> WITHDRAWN (by job seeker)
-  Any state -> REJECTED (by employer)
+note over Employer, DB
+  Available status progressions:
+  APPLIED → REVIEWING → INTERVIEW → OFFER → HIRED
+                   \→ TEST_TASK ↗
+  Any status → REJECTED or WITHDRAWN
 end note
 
 @enduml

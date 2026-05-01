@@ -110,19 +110,6 @@ KotlinX --> Presentation : JSON
 Exposed --> DBLayer : ORM
 JWT --> Presentation : Auth
 
-' ==================== NOTES ====================
-
-note right of AppServer
-  Deployment Options:
-  - Docker container
-  - Kubernetes pod
-  - Virtual machine
-  - Bare metal server
-
-  Scaling: Horizontal
-  (multiple instances)
-end note
-
 note right of PG
   Tables:
   - users (auth)
@@ -141,16 +128,5 @@ note bottom of NotDjinniDB
   - UNIQUE indexes
   - Auto-increment IDs
 end note
-
-' ==================== LEGEND ====================
-
-legend right
-  |= Symbol |= Description |
-  | Cloud | Client Layer |
-  | Node | Server/Container |
-  | Database | Data Storage |
-  | Component | Software Module |
-  | Artifact | Deployable Unit |
-endlegend
 
 @enduml

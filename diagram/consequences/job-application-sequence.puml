@@ -13,114 +13,61 @@ skinparam database {
 
 title NotDjinni - Job Application Creation Sequence Diagram
 
-actor "Client\n(Job Seeker)" as Client
-participant "ApplicationRoute" as AR
-participant "ApplicationRepository" as Repo
-participant "SeekerProfileDao" as SPDao
-participant "VacancyDao" as VDao
-participant "ApplicationDao" as ADao
-participant "CompanyDao" as CDao
-database "PostgreSQL" as DB
+actor "Job Seeker" as Seeker
+participant "System" as System
+database "Database" as DB
 
-== Authentication ==
+== Application Request ==
 
-Client -> AR: POST /application\n{vacancy_id, cover_letter}\nAuthorization: Bearer <JWT>
-activate AR
+Seeker -> System: Submit application\n(vacancy_id, cover_letter)
+activate System
 
-AR -> AR: Extract userId from JWT
-note right: JWTPrincipal.getClaim("user_id")
+== Verify Job Seeker Profile ==
+
+System -> DB: Check if seeker profile exists
+activate DB
+DB --> System: Profile found
+deactivate DB
+
+alt Profile not found
+    System --> Seeker: Error: Create profile first
+    deactivate System
+end
+
+== Verify Vacancy ==
+
+System -> DB: Check if vacancy exists
+activate DB
+DB --> System: Vacancy found
+deactivate DB
+
+alt Vacancy not found
+    System --> Seeker: Error: Vacancy not found
+    deactivate System
+end
+
+== Check for Duplicate Application ==
+
+System -> DB: Check if already applied to vacancy
+activate DB
+DB --> System: No previous application
+deactivate DB
+
+alt Already applied
+    System --> Seeker: Error: Already applied to this vacancy
+    deactivate System
+end
 
 == Create Application ==
 
-AR -> Repo: createApplication(userId, Application)
-activate Repo
-
-== Verify Seeker Profile ==
-
-Repo -> SPDao: getProfileByUserId(userId)
-activate SPDao
-
-SPDao -> DB: SELECT * FROM job_seeker_profiles\nWHERE user_id = ?
+System -> DB: Record application
 activate DB
-DB --> SPDao: SeekerProfileEntity
+DB --> System: Application created
 deactivate DB
-
-SPDao --> Repo: SeekerProfileEntity (id=seekerId)
-deactivate SPDao
-
-alt Profile not found
-    Repo --> AR: Result.failure(ProfileNotFound)
-    AR --> Client: 404 Not Found\n{"error": "Seeker profile not found"}
-end
-
-== Verify Vacancy Exists ==
-
-Repo -> VDao: getVacancy(vacancyId)
-activate VDao
-
-VDao -> DB: SELECT * FROM vacancies\nWHERE id = ?
-activate DB
-DB --> VDao: VacancyEntity
-deactivate DB
-
-VDao --> Repo: VacancyEntity
-deactivate VDao
-
-alt Vacancy not found
-    Repo --> AR: Result.failure(VacancyNotFound)
-    AR --> Client: 404 Not Found\n{"error": "Vacancy not found"}
-end
-
-== Check Duplicate Application ==
-
-Repo -> ADao: hasApplied(vacancyId, seekerId)
-activate ADao
-
-ADao -> DB: SELECT COUNT(*) FROM applications\nWHERE vacancy_id = ? AND job_seeker_id = ?
-activate DB
-DB --> ADao: 0 (not applied)
-deactivate DB
-
-ADao --> Repo: false
-deactivate ADao
-
-alt Already applied
-    Repo --> AR: Result.failure(AlreadyApplied)
-    AR --> Client: 409 Conflict\n{"error": "Already applied"}
-end
-
-== Create Application Record ==
-
-Repo -> ADao: createApplication(ApplicationEntity)
-activate ADao
-
-ADao -> DB: INSERT INTO applications\n(vacancy_id, job_seeker_id, status='APPLIED',\ncover_letter, created_at, updated_at)
-activate DB
-DB --> ADao: application_id
-deactivate DB
-
-ADao --> Repo: applicationId
-deactivate ADao
-
-== Build Response with Details ==
-
-Repo -> CDao: getCompany(vacancy.companyId)
-activate CDao
-CDao -> DB: SELECT * FROM companies WHERE id = ?
-DB --> CDao: CompanyEntity
-CDao --> Repo: CompanyEntity
-deactivate CDao
-
-Repo -> Repo: Build ApplicationWithDetails\n(application + vacancy + company + seeker)
 
 == Response ==
 
-Repo --> AR: Result.success(ApplicationWithDetails)
-deactivate Repo
-
-AR -> AR: Map to ApplicationResponse
-
-AR --> Client: 201 Created\n{id, vacancy, job_seeker, status, cover_letter, ...}
-deactivate AR
+System --> Seeker: Application confirmed\nReceive application details
+deactivate System
 
 @enduml

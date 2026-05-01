@@ -6,135 +6,66 @@ skinparam activity {
     FontSize 12
 }
 
-title NotDjinni - Application Review Activity Diagram
+title NotDjinni - Application Review Flow
 
 |Employer|
 start
-:Access applications for vacancy;
+:Access applications;
 
-|System|
-:Verify JWT authentication;
-:Extract userId from token;
+if (Logged in?) then (yes)
+    if (Has employer profile?) then (yes)
+        :Select vacancy to review;
 
-|Database|
-:SELECT employer_profile WHERE user_id = ?;
-
-|System|
-if (Has employer profile?) then (yes)
-    :Get companyId from profile;
-
-    |Employer|
-    :Select vacancy to review;
-
-    |System|
-    :GET /application/vacancy/{vacancyId};
-
-    |Database|
-    :SELECT vacancy WHERE id = ?;
-
-    |System|
-    if (Company owns vacancy?) then (yes)
-        |Database|
-        :SELECT applications\nWITH seeker profiles\nWHERE vacancy_id = ?;
-
-        |System|
-        :Return ApplicationWithDetails list;
-
-        |Employer|
-        :View applications list;
-        :See candidate profiles;
-        :Select application to review;
-
-        |System|
-        :GET /application/{id};
-
-        |Employer|
-        :View full application details;
-        :Review cover letter;
-        :Review seeker profile;
-        :Review work experience;
-
-        switch (Update Status?)
-        case (Start Review)
-            |System|
-            :PUT /application/{id}/status\nstatus=REVIEWING;
-
-            |Database|
-            :UPDATE applications SET status = 'REVIEWING';
+        if (Authorized to view vacancy?) then (yes)
+            :View candidate applications;
+            :Select application to review;
+            :Read cover letter and\ncandidate profile;
 
             |Employer|
-            :Application marked as reviewing;
+            switch (Update status?)
+            case (Start reviewing)
+                :Mark as reviewing;
 
-        case (Schedule Interview)
+            case (Schedule interview)
+                :Mark for interview;
+
+            case (Assign test task)
+                :Mark test task assigned;
+
+            case (Send offer)
+                :Mark offer extended;
+
+            case (Hire candidate)
+                :Mark hired;
+
+            case (Reject)
+                :Reject application;
+
+            endswitch
+
             |System|
-            :PUT /application/{id}/status\nstatus=INTERVIEW;
-
-            |Database|
-            :UPDATE applications SET status = 'INTERVIEW';
+            :Update application status;
 
             |Employer|
-            :Schedule interview externally;
-            :Application marked for interview;
+            :Status updated;
+            stop
 
-        case (Assign Test Task)
-            |System|
-            :PUT /application/{id}/status\nstatus=TEST_TASK;
-
-            |Database|
-            :UPDATE applications SET status = 'TEST_TASK';
-
+        else (no)
             |Employer|
-            :Send test task externally;
-            :Application marked with test;
-
-        case (Extend Offer)
-            |System|
-            :PUT /application/{id}/status\nstatus=OFFER;
-
-            |Database|
-            :UPDATE applications SET status = 'OFFER';
-
-            |Employer|
-            :Prepare and send offer;
-            :Application marked with offer;
-
-        case (Mark as Hired)
-            |System|
-            :PUT /application/{id}/status\nstatus=HIRED;
-
-            |Database|
-            :UPDATE applications SET status = 'HIRED';
-
-            |Employer|
-            :Candidate hired!;
-            :Consider closing vacancy;
-
-        case (Reject Application)
-            |System|
-            :PUT /application/{id}/status\nstatus=REJECTED;
-
-            |Database|
-            :UPDATE applications SET status = 'REJECTED';
-
-            |Employer|
-            :Application rejected;
-            :Optionally send feedback;
-
-        endswitch
+            :Access denied;
+            stop
+        endif
 
     else (no)
         |Employer|
-        :Show "Not authorized" error;
-        :Cannot view other company's applications;
+        :Create employer profile first;
         stop
     endif
 
 else (no)
     |Employer|
-    :Show "Create employer profile first";
+    :Login;
     stop
 endif
-
-stop
 
 @enduml

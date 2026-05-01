@@ -13,99 +13,42 @@ skinparam database {
 
 title NotDjinni - Vacancy Creation Sequence Diagram
 
-actor "Client\n(Employer)" as Client
-participant "VacancyRoute" as VR
-participant "VacancyRepository" as Repo
-participant "EmployerProfileDao" as EPDao
-participant "VacancyDao" as VDao
-participant "CompanyDao" as CDao
-database "PostgreSQL" as DB
+actor "Employer" as Employer
+participant "System" as System
+database "Database" as DB
 
-== Authentication ==
+== Vacancy Creation Request ==
 
-Client -> VR: POST /vacancy\n{title, description, salary_min, salary_max, ...}\nAuthorization: Bearer <JWT>
-activate VR
+Employer -> System: Submit vacancy details\n(title, description, salary, etc.)
+activate System
 
-VR -> VR: Extract userId from JWT
+== Get Employer Profile ==
 
-== Create Vacancy ==
-
-VR -> Repo: createVacancy(userId, Vacancy)
-activate Repo
-
-== Get Employer Profile (to get companyId) ==
-
-Repo -> EPDao: getProfileByUserId(userId)
-activate EPDao
-
-EPDao -> DB: SELECT * FROM employer_profiles\nWHERE user_id = ?
+System -> DB: Check employer profile
 activate DB
-DB --> EPDao: EmployerProfileEntity\n(id, userId, companyId, role)
+DB --> System: Profile found with company
 deactivate DB
 
-EPDao --> Repo: EmployerProfileEntity
-deactivate EPDao
-
 alt Employer profile not found
-    Repo --> VR: Result.failure(EmployerProfileNotFound)
-    VR --> Client: 404 Not Found\n{"error": "Employer profile not found.\nCreate employer profile first."}
+    System --> Employer: Error: Create employer profile first
+    deactivate System
 end
-
-note right of Repo
-  companyId is extracted from
-  employer's profile and auto-linked
-  to the vacancy (not from request)
-end note
 
 == Validate Vacancy Data ==
 
-Repo -> Repo: validateVacancy(vacancy)
-note right
-  - title not empty
-  - salary_min <= salary_max
-  - valid employment_type enum
-  - valid category enum
-  - valid status enum
-end note
+System -> System: Validate vacancy details
+note right: Check required fields,\nvalue ranges, valid options
 
-== Create Vacancy Record ==
+== Create Vacancy ==
 
-Repo -> VDao: createVacancy(VacancyEntity)
-activate VDao
-
-VDao -> DB: INSERT INTO vacancies\n(company_id, title, description,\nsalary_min, salary_max,\nmin_experience_years,\nemployment_type, category, status,\ncreated_at, updated_at)
+System -> DB: Record vacancy
 activate DB
-DB --> VDao: vacancy_id
+DB --> System: Vacancy created
 deactivate DB
-
-VDao --> Repo: vacancyId
-deactivate VDao
-
-== Get Company Details for Response ==
-
-Repo -> CDao: getCompany(companyId)
-activate CDao
-
-CDao -> DB: SELECT * FROM companies\nWHERE id = ?
-activate DB
-DB --> CDao: CompanyEntity
-deactivate DB
-
-CDao --> Repo: CompanyEntity
-deactivate CDao
-
-== Build Response ==
-
-Repo -> Repo: Build VacancyWithDetails\n(vacancy + company)
-
-Repo --> VR: Result.success(VacancyWithDetails)
-deactivate Repo
 
 == Response ==
 
-VR -> VR: Map to VacancyResponse
-
-VR --> Client: 201 Created\n{id, company, title, description,\nsalary_min, salary_max, status, ...}
-deactivate VR
+System --> Employer: Vacancy created successfully\nReceive vacancy details
+deactivate System
 
 @enduml

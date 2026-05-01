@@ -1,0 +1,4 @@
+interface:
+  display_name: "Merge Worktree Context"
+  short_description: "Sync AGENTS, ai/rules, and .codex updates from project worktrees"
+  default_prompt: "Use merge-worktree-context to scan ../not-djinni-worktrees for AGENTS.md, ai/rules, and .codex updates, then apply approved changes to the current branch."
