@@ -17,5 +17,6 @@ data class VacancyEntity(
     val category: JobCategoryCode?,
     val status: VacancyStatusCode,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val applicationsCount: Int = 0
 )

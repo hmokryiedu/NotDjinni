@@ -19,5 +19,6 @@ interface VacancyDao {
 
 data class VacancyWithDetailsEntity(
     val vacancy: VacancyEntity,
-    val company: CompanyEntity
+    val company: CompanyEntity,
+    val applicationsCount: Int = vacancy.applicationsCount
 )
