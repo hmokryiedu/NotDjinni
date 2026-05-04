@@ -1,39 +1,108 @@
-# Правила агентов проекта
+# Project Agent Rules
 
-## Маппинг ролей
+## Role Mapping
 
-Проектный `AGENTS.md` имеет приоритет над глобальным маппингом ролей.
+Project-level `AGENTS.md` has priority over global role mapping.
 
-| Роль | Агент | Обязательные правила |
+| Role | Agent | Required rules |
 | --- | --- | --- |
-| `architect` | [@backend_architect](subagent://backend_architect) | `ai/rules/backend-architecture-rules.md` |
-| `executor` | [@backend_implementor](subagent://backend_implementor) | `ai/rules/backend-implementation-rules.md` |
-| `tester` | [@backend_tester](subagent://backend_tester) | `ai/rules/backend-testing-rules.md` |
+| `architect` | [@backend_architect](subagent://backend_architect) | `ai/rules/backend-architecture-rules.md` (present) |
+| `executor` | [@backend_implementor](subagent://backend_implementor) | `ai/rules/backend-implementation-rules.md` (present) |
+| `tester` | [@backend_tester](subagent://backend_tester) | `ai/rules/backend-testing-rules.md` (present) |
 
-- Если проектный `AGENTS.md` задаёт `role -> agent`, использовать его вместо глобального маппинга.
-- Глобальный маппинг используется только как резервный вариант, если проектный маппинг отсутствует.
-- В этом backend-проекте нет роли `ui-designer` в project mapping.
+Resolution order:
 
-## Правила агентов
+1. Project-level `AGENTS.md`.
+2. Global `AGENTS.md`.
+3. Unresolved role -> stop and report.
 
-- `@backend_architect` обязан использовать `ai/rules/backend-architecture-rules.md`.
-- `@backend_implementor` обязан использовать `ai/rules/backend-implementation-rules.md`.
-- `@backend_tester` обязан использовать `ai/rules/backend-testing-rules.md`.
-- Если задача меняет структуру backend `core`/архитектуры, в той же задаче обязательно обновить релевантные `ai/rules/*`.
-- Изменения backend `core`/архитектуры без обновления релевантных `ai/rules/*` считаются незавершёнными.
+Disabled roles must not fallback to global mapping.
 
-## Backend Project Context
+## Disabled Roles
 
-- Stack: Kotlin/JVM, Ktor, Koin, Exposed, PostgreSQL driver, kotlinx.serialization.
+- `ui-designer`
+- `plan-coordinator`
+
+## Agent Registration Check
+
+- All mapped agents are registered in `.codex/config.toml` or `.codex/agents/`.
+
+## AI Pipeline V2
+
+Planning artifacts live under:
+
+`ai/specs/<task-id>/`
+
+Required standard-mode artifacts:
+
+- `manifest.md`
+- `manifest.yml`
+- `architecture-plan.md`
+- `architecture-contract.yml`
+- `ui-build-sheet.md`, only if UI is active
+- `ui-contract.yml`, only if UI is active
+- `compatibility-report.md`
+- `summary.md`
+- `questions.md`
+- `user-review-notes.md`
+- `changelog.md`
+- `validator-report.json`
+
+Main agent rules:
+
+- Keep main context compact.
+- Do not paste full research plans into chat.
+- Route user questions and answers through `questions.md`.
+- Ask approval by artifact versions from `manifest.yml`.
+- Do not launch executor while artifacts are stale, incompatible, or unapproved.
+
+Research agent rules:
+
+- Write detailed plans to `ai/specs/<task-id>/`.
+- Return compact status and artifact paths in chat.
+- Do not edit production/source/config files during research.
+- Use `Do Not Infer` sections to block executor guesswork.
+
+Coordinator rules:
+
+- `plan-coordinator` is disabled for this backend project unless explicitly added later.
+- Main agent handles compatibility/report duties locally when needed.
+- Do not fallback to a global coordinator mapping while the role is disabled.
+
+Executor gates:
+
+- `manifest.yml` is approved.
+- Current artifact versions match approved versions.
+- `validator-report.json` status is `pass`.
+- `compatibility-report.md` status is `pass`.
+- No stale artifacts.
+- No open blocking questions.
+- Required artifacts exist.
+
+## Runtime Modes
+
+- `small`: one research domain, no cross-role dependency.
+- `standard`: architecture + implementation/test contract dependency, coordinator handled locally unless explicitly enabled.
+- `large`: 3+ domains or unknown/high-risk scope; enable a coordinator role first if dedicated coordination is required.
+
+Mode is selected by the main agent and recorded in `manifest.yml`.
+Mode may be raised, but must not be lowered within the same task.
+
+## Project Context
+
+- Stack: Kotlin/JVM backend service with Ktor, Koin, Exposed, PostgreSQL driver, and kotlinx.serialization.
 - Entry point: `not.djinni.ApplicationKt.module`.
-- Main layers:
-  - `presentation`: Ktor plugins, router, routes, request/response DTOs.
-  - `domain`: repository contracts, use cases, models, domain exceptions.
-  - `data`: repository implementations and mappers.
-  - `database`: DAO/table/entity storage layer.
+- Main layers: `presentation`, `domain`, `data`, `database`.
+- No UI role is active unless explicitly added.
+- Project-local rules override global rules.
 
-## Тесты и проверки
+## Verification
 
-- Для backend manual QA использовать `@backend_tester`.
-- Для локальных JVM unit tests использовать project style и existing Gradle conventions.
-- Не использовать Android-specific testing rules для этого проекта.
+- Use `./gradlew test` for local JVM tests.
+- Use `./gradlew build` when the change affects integration, wiring, or packaging.
+- For API changes, validate positive and negative request scenarios.
+
+## Core / Rules Update
+
+If project core architecture changes, update relevant `ai/rules/*` in the same task.
+Core/architecture changes without matching rule updates are incomplete.
