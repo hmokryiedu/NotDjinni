@@ -8,7 +8,7 @@ Project-level `AGENTS.md` has priority over global role mapping.
 | --- | --- | --- |
 | `architect` | [@backend_architect](subagent://backend_architect) | `ai/rules/backend-architecture-rules.md` (present) |
 | `executor` | [@backend_implementor](subagent://backend_implementor) | `ai/rules/backend-implementation-rules.md` (present) |
-| `tester` | [@backend_tester](subagent://backend_tester) | `ai/rules/backend-testing-rules.md` (present) |
+| `tester` | [@backend_tester](subagent://backend_tester) | `ai/rules/backend-testing-rules.md` (present), validation phase owner |
 
 Resolution order:
 
@@ -62,6 +62,17 @@ Research agent rules:
 - Return compact status and artifact paths in chat.
 - Do not edit production/source/config files during research.
 - Use `Do Not Infer` sections to block executor guesswork.
+
+Validation phase rules:
+
+- After `executor` finishes implementation for any backend behavior change, main agent dispatches `tester` before claiming task completion.
+- `tester` validates affected behavior as an external client through HTTP endpoints.
+- Use `validation-plan.md` / `validation-contract.yml` when present.
+- Write `validation-result.md` and `validation-result.yml` when validation phase is active or task/profile requires artifacts.
+- Create users/entities/test records only through existing endpoints to simulate full real user flow.
+- Do not create, update, or delete DB records through SQL, Exposed, repositories, scripts, fixtures, DB consoles, or other direct mutation methods.
+- Cover happy paths, negative paths, and meaningful corner cases for affected behavior.
+- Return reproducible evidence: request, expected result, actual result, response summary, created test data, and relevant logs.
 
 Coordinator rules:
 

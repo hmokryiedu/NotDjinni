@@ -23,9 +23,26 @@
 
 - Проверять endpoint/flow из задачи.
 - Для измененного flow покрыть happy path и минимум один negative case.
+- Для validation phase проверять полный user flow через public/existing HTTP endpoints, если flow затронут.
+- Продумывать corner cases: missing/invalid fields, boundary values, duplicates, invalid auth, repeated requests, ordering/pagination/filtering if touched.
 - Для auth flow проверять no-token/invalid-token cases, если endpoint protected.
 - Для regression smoke брать только соседние endpoints, реально связанные с задачей.
 - Не расширять scope до полного API audit без запроса.
+
+## Test Data
+
+- Test data создавать только через existing HTTP endpoints.
+- Симулировать real user/client flow, включая prerequisite records.
+- Использовать unique synthetic values per run.
+- Cleanup делать только через existing endpoint, если такой endpoint есть.
+- Если cleanup невозможен через endpoint, указать created records/identifiers в evidence.
+
+Запрещено:
+- создавать, апдейтить или удалять записи напрямую через SQL;
+- использовать Exposed DAO/table calls, repositories, scripts, fixtures, DB consoles или любые direct DB mutation methods;
+- обходить auth/business rules через internal APIs.
+
+Если prerequisite нельзя создать через endpoint, вернуть `blocked` или зафиксировать validation gap. Не обходить запрет direct DB mutation.
 
 ## Evidence
 
@@ -35,6 +52,7 @@
 - expected status/result;
 - actual status/result;
 - response body summary;
+- created test data/identifiers, если есть;
 - relevant logs, если есть.
 
 ## Bug Report
