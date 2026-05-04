@@ -5,9 +5,11 @@ import not.djinni.database.NotDjinniDatabase.runQuery
 import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.vacancy.*
+import not.djinni.database.impl.application.ApplicationTable
 import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.employer.toEntity
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -33,15 +35,18 @@ class DefaultVacancyDao : VacancyDao {
     }
 
     override suspend fun getVacancy(id: Long): VacancyEntity? = runQuery {
-        VacancyTableEntity.findById(id)?.toEntity()
+        val applicationsCount = countApplicationsByVacancyIds(listOf(id))[id] ?: 0
+        VacancyTableEntity.findById(id)?.toEntity()?.copy(applicationsCount = applicationsCount)
     }
 
     override suspend fun getVacancyWithDetails(id: Long): VacancyWithDetailsEntity? = runQuery {
         val vacancyTableEntity = VacancyTableEntity.findById(id) ?: return@runQuery null
         val company = CompanyTableEntity.findById(vacancyTableEntity.companyId.value) ?: return@runQuery null
+        val applicationsCount = countApplicationsByVacancyIds(listOf(id))[id] ?: 0
         VacancyWithDetailsEntity(
-            vacancy = vacancyTableEntity.toEntity(),
-            company = company.toEntity()
+            vacancy = vacancyTableEntity.toEntity().copy(applicationsCount = applicationsCount),
+            company = company.toEntity(),
+            applicationsCount = applicationsCount
         )
     }
 
@@ -74,21 +79,25 @@ class DefaultVacancyDao : VacancyDao {
         limit: Int,
         offset: Int
     ): List<VacancyWithDetailsEntity> = runQuery {
-        filter.buildVacancyQuery()
+        val vacancies = filter.buildVacancyQuery()
             .limit(n = limit, offset = offset.toLong())
-            .map {
-                val vacancy = VacancyTableEntity.wrapRow(it)
+            .map { VacancyTableEntity.wrapRow(it) }
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        vacancies
+            .map { vacancy ->
                 val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: run {
                     error("Company not found for vacancy id=${vacancy.id.value}")
                 }
+                val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity(),
+                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
                     company = CompanyEntity(
                         id = company.id.value,
                         companyName = company.companyName,
                         website = company.website,
                         description = company.description
-                    )
+                    ),
+                    applicationsCount = applicationsCount
                 )
             }
     }
@@ -103,22 +112,31 @@ class DefaultVacancyDao : VacancyDao {
         offset: Int
     ): List<VacancyWithDetailsEntity> = runQuery {
         val company = CompanyTableEntity.findById(companyId)?.toEntity() ?: return@runQuery emptyList()
-        VacancyTableEntity.find { VacancyTable.companyId eq EntityID(companyId, CompanyTable) }
+        val vacancies = VacancyTableEntity.find { VacancyTable.companyId eq EntityID(companyId, CompanyTable) }
             .orderBy(VacancyTable.createdAt to SortOrder.DESC)
             .limit(limit, offset.toLong())
+            .toList()
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        vacancies
             .map { vacancy ->
+                val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity(),
-                    company = company
+                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                    company = company,
+                    applicationsCount = applicationsCount
                 )
             }
     }
 
     override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = runQuery {
-        VacancyTableEntity.all()
+        val vacancies = VacancyTableEntity.all()
             .orderBy(VacancyTable.createdAt to SortOrder.DESC)
             .limit(limit)
-            .map { it.toEntity() }
+            .toList()
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        vacancies.map { vacancy ->
+            vacancy.toEntity().copy(applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0)
+        }
     }
 
     override suspend fun updateVacancyStatus(id: Long, status: VacancyStatusCode): Boolean = runQuery {
@@ -158,5 +176,22 @@ class DefaultVacancyDao : VacancyDao {
             }
             orderBy(sortColumn to sortOrder)
         }
+    }
+
+    private fun countApplicationsByVacancyIds(vacancyIds: List<Long>): Map<Long, Int> {
+        if (vacancyIds.isEmpty()) return emptyMap()
+
+        val vacancyEntityIds = vacancyIds.map { EntityID(it, VacancyTable) }
+        val countExpression = ApplicationTable.id.count()
+        return ApplicationTable
+            .select(ApplicationTable.vacancyId, countExpression)
+            .where {
+                (ApplicationTable.vacancyId inList vacancyEntityIds) and
+                    (ApplicationTable.statusCode neq ApplicationStatusCode.WITHDRAWN)
+            }
+            .groupBy(ApplicationTable.vacancyId)
+            .associate { row ->
+                row[ApplicationTable.vacancyId].value to row[countExpression].toInt()
+            }
     }
 }

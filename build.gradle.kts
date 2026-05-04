@@ -19,5 +19,11 @@ dependencies {
 
     implementation(libs.logback)
 
+    testImplementation(kotlin("test"))
+
     ksp(libs.koin.ksp.compiler)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

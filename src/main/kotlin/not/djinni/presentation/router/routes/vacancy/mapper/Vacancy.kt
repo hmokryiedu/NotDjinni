@@ -65,7 +65,8 @@ fun Vacancy.toResponse() = VacancyResponse(
     category = category?.toRequest()?.name,
     status = status.toRequest().name,
     createdAt = createdAt.toString(),
-    updatedAt = updatedAt.toString()
+    updatedAt = updatedAt.toString(),
+    applicationsCount = applicationsCount
 )
 
 fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
@@ -80,7 +81,8 @@ fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
     category = category?.toRequest()?.name,
     status = status.toRequest().name,
     createdAt = createdAt.toString(),
-    updatedAt = updatedAt.toString()
+    updatedAt = updatedAt.toString(),
+    applicationsCount = applicationsCount
 )
 
 fun List<Vacancy>.toResponseList() = VacancyListResponse(

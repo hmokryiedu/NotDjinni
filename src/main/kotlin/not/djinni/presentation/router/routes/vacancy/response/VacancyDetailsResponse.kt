@@ -29,5 +29,7 @@ data class VacancyDetailsResponse(
     @SerialName("created_at")
     val createdAt: String,
     @SerialName("updated_at")
-    val updatedAt: String
+    val updatedAt: String,
+    @SerialName("applications_count")
+    val applicationsCount: Int
 )
