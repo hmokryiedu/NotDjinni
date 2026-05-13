@@ -13,7 +13,9 @@ interface VacancyRepository {
     suspend fun deleteVacancy(userId: Long, id: Long): Result<Unit>
     suspend fun getVacancies(filter: VacancyFilter, limit: Int = 20, offset: Int = 0): Result<List<VacancyWithDetails>>
     suspend fun getPublicVacancies(filter: VacancyFilter, limit: Int = 20, offset: Int = 0): Result<List<VacancyWithDetails>>
+    suspend fun getPublicVacanciesForSeeker(userId: Long, filter: VacancyFilter, limit: Int = 20, offset: Int = 0): Result<List<VacancyWithDetails>>
     suspend fun getPublicVacancyWithDetails(id: Long): Result<VacancyWithDetails>
+    suspend fun getPublicVacancyWithDetailsForSeeker(userId: Long, id: Long): Result<VacancyWithDetails>
     suspend fun getPublicRecentVacancies(limit: Int = 10): Result<List<VacancyWithDetails>>
     suspend fun getPublicCompanyVacancies(companyId: Long, limit: Int = 20, offset: Int = 0): Result<List<VacancyWithDetails>>
     suspend fun countVacancies(filter: VacancyFilter): Result<Int>

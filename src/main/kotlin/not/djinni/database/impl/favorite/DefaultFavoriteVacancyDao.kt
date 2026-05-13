@@ -6,34 +6,43 @@ import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.favorite.FavoriteVacancyDao
 import not.djinni.database.api.favorite.FavoriteVacancyEntity
 import not.djinni.database.api.vacancy.VacancyWithDetailsEntity
+import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.vacancy.VacancyTable
 import not.djinni.database.impl.vacancy.VacancyTableEntity
 import not.djinni.database.impl.vacancy.countApplicationsByVacancyIds
 import not.djinni.database.impl.vacancy.toEntity
+import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.exceptions.ExposedSQLException
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.selectAll
 import org.koin.core.annotation.Single
 
 @Single([FavoriteVacancyDao::class])
 class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
 
     override suspend fun addFavoriteVacancy(favorite: FavoriteVacancyEntity): Boolean = runQuery {
-        val exists = !FavoriteVacancyTableEntity.find {
-            (FavoriteVacancyTable.vacancyId eq EntityID(favorite.vacancyId, VacancyTable)) and
+        try {
+            val exists = !FavoriteVacancyTableEntity.find {
+                (FavoriteVacancyTable.vacancyId eq EntityID(favorite.vacancyId, VacancyTable)) and
                     (FavoriteVacancyTable.jobSeekerId eq EntityID(favorite.jobSeekerId, SeekerProfileTable))
-        }.empty()
-        if (exists) return@runQuery true
-        FavoriteVacancyTableEntity.new {
-            vacancyId = EntityID(favorite.vacancyId, VacancyTable)
-            jobSeekerId = EntityID(favorite.jobSeekerId, SeekerProfileTable)
-            createdAt = favorite.createdAt ?: Clock.System.now()
+            }.empty()
+            if (exists) return@runQuery true
+            FavoriteVacancyTableEntity.new {
+                vacancyId = EntityID(favorite.vacancyId, VacancyTable)
+                jobSeekerId = EntityID(favorite.jobSeekerId, SeekerProfileTable)
+                createdAt = favorite.createdAt ?: Clock.System.now()
+            }
+            true
+        } catch (_: ExposedSQLException) {
+            true
         }
-        true
     }
 
     override suspend fun removeFavoriteVacancy(vacancyId: Long, jobSeekerId: Long): Boolean = runQuery {
@@ -48,17 +57,22 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
         limit: Int,
         offset: Int,
     ): List<VacancyWithDetailsEntity> = runQuery {
-        val favorites = FavoriteVacancyTableEntity.find {
-            FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable)
-        }
-            .orderBy(FavoriteVacancyTable.createdAt to SortOrder.DESC)
+        val rows = FavoriteVacancyTable
+            .join(VacancyTable, JoinType.INNER, FavoriteVacancyTable.vacancyId, VacancyTable.id)
+            .join(CompanyTable, JoinType.INNER, VacancyTable.companyId, CompanyTable.id)
+            .selectAll()
+            .where {
+                (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable)) and
+                    (VacancyTable.status eq VacancyStatusCode.ACTIVE)
+            }
+            .orderBy(VacancyTable.createdAt to SortOrder.DESC)
             .limit(limit, offset.toLong())
             .toList()
-        val applicationsCountByVacancyId = countApplicationsByVacancyIds(favorites.map { it.vacancyId.value })
-        favorites
-            .mapNotNull { favorite ->
-                val vacancy = VacancyTableEntity.findById(favorite.vacancyId.value) ?: return@mapNotNull null
-                val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: return@mapNotNull null
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(rows.map { it[VacancyTable.id].value })
+        rows
+            .map { row ->
+                val vacancy = VacancyTableEntity.wrapRow(row)
+                val company = CompanyTableEntity.wrapRow(row)
                 val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
                     vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
@@ -78,5 +92,16 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
             (FavoriteVacancyTable.vacancyId eq EntityID(vacancyId, VacancyTable)) and
                     (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable))
         }.empty()
+    }
+
+    override suspend fun getFavoriteVacancyIds(jobSeekerId: Long, vacancyIds: Set<Long>): Set<Long> = runQuery {
+        if (vacancyIds.isEmpty()) return@runQuery emptySet()
+        FavoriteVacancyTable
+            .select(FavoriteVacancyTable.vacancyId)
+            .where {
+                (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable)) and
+                    (FavoriteVacancyTable.vacancyId inList vacancyIds.map { EntityID(it, VacancyTable) })
+            }
+            .mapTo(mutableSetOf()) { it[FavoriteVacancyTable.vacancyId].value }
     }
 }

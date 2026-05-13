@@ -1,12 +1,10 @@
 package not.djinni.presentation.router.routes.favorite
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
-import io.ktor.server.request.receive
-import io.ktor.server.resources.delete
-import io.ktor.server.resources.get
+import io.ktor.http.*
+import io.ktor.server.auth.*
+import io.ktor.server.resources.*
 import io.ktor.server.resources.post
-import io.ktor.server.response.respond
+import io.ktor.server.response.*
 import io.ktor.server.routing.Routing
 import not.djinni.domain.exception.favorite.FavoriteVacancyException
 import not.djinni.domain.repository.FavoriteVacancyRepository
@@ -16,7 +14,6 @@ import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import not.djinni.presentation.router.routes.common.extension.getUserIdFromTokenOrSendError
 import not.djinni.presentation.router.routes.favorite.mapper.toStatusCode
-import not.djinni.presentation.router.routes.favorite.request.CreateFavoriteVacancyRequest
 import not.djinni.presentation.router.routes.favorite.resources.FavoriteVacancy
 import not.djinni.presentation.router.routes.vacancy.mapper.toResponseList
 import org.koin.core.annotation.Single
@@ -34,10 +31,9 @@ class FavoriteVacancyRoute(
 
     private fun Routing.addFavoriteVacancy() {
         authenticate(JwtAuth.NAME) {
-            post<FavoriteVacancy> {
+            post<FavoriteVacancy.ByVacancy> { resource ->
                 val userId = getUserIdFromTokenOrSendError() ?: return@post
-                val request = call.receive<CreateFavoriteVacancyRequest>()
-                favoriteVacancyRepository.addFavoriteVacancy(userId = userId, vacancyId = request.vacancyId)
+                favoriteVacancyRepository.addFavoriteVacancy(userId = userId, vacancyId = resource.vacancyId)
                     .onSuccess { call.respond(status = HttpStatusCode.Created, message = "Vacancy added to favorites".toMessageResponse()) }
                     .handleError(call = call, mapToCode = FavoriteVacancyException::toStatusCode)
             }
@@ -57,7 +53,7 @@ class FavoriteVacancyRoute(
 
     private fun Routing.getFavoriteVacancies() {
         authenticate(JwtAuth.NAME) {
-            get<FavoriteVacancy> {
+            get<FavoriteVacancy.VacancyList> {
                 val userId = getUserIdFromTokenOrSendError() ?: return@get
                 val queryParams = call.request.queryParameters
                 val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT

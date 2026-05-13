@@ -5,6 +5,8 @@ import not.djinni.data.mapper.toDomain
 import not.djinni.data.mapper.toEntity
 import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.EmployerProfileDao
+import not.djinni.database.api.favorite.FavoriteVacancyDao
+import not.djinni.database.api.seeker.SeekerProfileDao
 import not.djinni.database.api.vacancy.VacancyDao
 import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.database.api.vacancy.VacancySortField
@@ -17,7 +19,9 @@ import org.koin.core.annotation.Single
 @Single(binds = [VacancyRepository::class])
 class DefaultVacancyRepository(
     private val vacancyDao: VacancyDao,
-    private val employerProfileDao: EmployerProfileDao
+    private val employerProfileDao: EmployerProfileDao,
+    private val seekerProfileDao: SeekerProfileDao,
+    private val favoriteVacancyDao: FavoriteVacancyDao,
 ) : VacancyRepository {
 
     override suspend fun createVacancy(userId: Long, vacancy: Vacancy) = runCatching {
@@ -80,10 +84,42 @@ class DefaultVacancyRepository(
         vacancyDao.getVacanciesWithDetails(filter.forceActive(), limit, offset).map { it.toDomain() }
     }
 
+    override suspend fun getPublicVacanciesForSeeker(
+        userId: Long,
+        filter: VacancyFilter,
+        limit: Int,
+        offset: Int,
+    ) = runCatching {
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
+            throw VacancyException.Unauthorized("No seeker profile found")
+        }
+        val vacancies = vacancyDao.getVacanciesWithDetails(filter.forceActive(), limit, offset)
+        val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
+            jobSeekerId = seekerProfile.id,
+            vacancyIds = vacancies.map { it.vacancy.id }.toSet(),
+        )
+        vacancies.map { vacancy ->
+            vacancy.copy(vacancy = vacancy.vacancy.copy(isFavorite = favoriteVacancyIds.contains(vacancy.vacancy.id))).toDomain()
+        }
+    }
+
     override suspend fun getPublicVacancyWithDetails(id: Long) = runCatching {
         val vacancy = vacancyDao.getVacancyWithDetails(id)?.toDomain() ?: throw VacancyException.VacancyNotFound()
         if (vacancy.status != VacancyStatusCode.ACTIVE) throw VacancyException.VacancyNotFound()
         vacancy
+    }
+
+    override suspend fun getPublicVacancyWithDetailsForSeeker(userId: Long, id: Long) = runCatching {
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
+            throw VacancyException.Unauthorized("No seeker profile found")
+        }
+        val vacancy = vacancyDao.getVacancyWithDetails(id) ?: throw VacancyException.VacancyNotFound()
+        if (vacancy.vacancy.status != VacancyStatusCode.ACTIVE) throw VacancyException.VacancyNotFound()
+        val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
+            jobSeekerId = seekerProfile.id,
+            vacancyIds = setOf(id),
+        )
+        vacancy.copy(vacancy = vacancy.vacancy.copy(isFavorite = favoriteVacancyIds.contains(id))).toDomain()
     }
 
     override suspend fun getPublicRecentVacancies(limit: Int) = runCatching {

@@ -8,3 +8,9 @@ data class VacancyListResponse(
     @SerialName("vacancies")
     val vacancies: List<VacancyResponse>
 )
+
+@Serializable
+data class VacancyGuestListResponse(
+    @SerialName("vacancies")
+    val vacancies: List<VacancyGuestResponse>
+)

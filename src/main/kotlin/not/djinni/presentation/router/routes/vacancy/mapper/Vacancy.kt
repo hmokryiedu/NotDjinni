@@ -9,6 +9,10 @@ import not.djinni.presentation.router.routes.common.request.JobCategoryRequest
 import not.djinni.presentation.router.routes.vacancy.request.UpdateVacancyRequest
 import not.djinni.presentation.router.routes.vacancy.request.VacancyStatusRequest
 import not.djinni.presentation.router.routes.vacancy.response.VacancyDetailsResponse
+import not.djinni.presentation.router.routes.vacancy.response.VacancyGuestDetailsResponse
+import not.djinni.presentation.router.routes.vacancy.response.VacancyGuestListResponse
+import not.djinni.presentation.router.routes.vacancy.response.VacancyGuestResponse
+import not.djinni.presentation.router.routes.vacancy.response.VacancyGuestWithDetailsListResponse
 import not.djinni.presentation.router.routes.vacancy.response.VacancyListResponse
 import not.djinni.presentation.router.routes.vacancy.response.VacancyResponse
 import not.djinni.presentation.router.routes.vacancy.response.VacancyWithDetailsListResponse
@@ -66,7 +70,24 @@ fun Vacancy.toResponse() = VacancyResponse(
     status = status.toRequest().name,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
-    applicationsCount = applicationsCount
+    applicationsCount = applicationsCount,
+    isFavorite = isFavorite,
+)
+
+fun Vacancy.toGuestResponse() = VacancyGuestResponse(
+    id = id,
+    companyId = companyId,
+    title = title,
+    description = description,
+    salaryMin = salary.min,
+    salaryMax = salary.max,
+    minExperienceYears = minExperienceYears,
+    employmentType = employmentType?.toRequest()?.name,
+    category = category?.toRequest()?.name,
+    status = status.toRequest().name,
+    createdAt = createdAt.toString(),
+    updatedAt = updatedAt.toString(),
+    applicationsCount = applicationsCount,
 )
 
 fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
@@ -82,13 +103,38 @@ fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
     status = status.toRequest().name,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
-    applicationsCount = applicationsCount
+    applicationsCount = applicationsCount,
+    isFavorite = isFavorite,
+)
+
+fun VacancyWithDetails.toGuestResponse() = VacancyGuestDetailsResponse(
+    id = id,
+    company = company.toResponse(),
+    title = title,
+    description = description,
+    salaryMin = salary.min,
+    salaryMax = salary.max,
+    minExperienceYears = minExperienceYears,
+    employmentType = employmentType?.toRequest()?.name,
+    category = category?.toRequest()?.name,
+    status = status.toRequest().name,
+    createdAt = createdAt.toString(),
+    updatedAt = updatedAt.toString(),
+    applicationsCount = applicationsCount,
 )
 
 fun List<Vacancy>.toResponseList() = VacancyListResponse(
     vacancies = map { it.toResponse() }
 )
 
+fun List<Vacancy>.toGuestResponseList() = VacancyGuestListResponse(
+    vacancies = map { it.toGuestResponse() }
+)
+
 fun List<VacancyWithDetails>.toResponseList() = VacancyWithDetailsListResponse(
     vacancies = map { it.toResponse() }
+)
+
+fun List<VacancyWithDetails>.toGuestResponseList() = VacancyGuestWithDetailsListResponse(
+    vacancies = map { it.toGuestResponse() }
 )

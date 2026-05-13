@@ -7,6 +7,11 @@ import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.employer.EmployerProfileDao
 import not.djinni.database.api.employer.EmployerProfileEntity
 import not.djinni.database.api.employer.EmployerProfileWithCompany
+import not.djinni.database.api.favorite.FavoriteVacancyDao
+import not.djinni.database.api.favorite.FavoriteVacancyEntity
+import not.djinni.database.api.seeker.SeekerProfileDao
+import not.djinni.database.api.seeker.SeekerProfileEntity
+import not.djinni.database.api.seeker.WorkExperienceEntity
 import not.djinni.database.api.vacancy.VacancyDao
 import not.djinni.database.api.vacancy.VacancyEntity
 import not.djinni.database.api.vacancy.VacancyFilter
@@ -149,10 +154,76 @@ class DefaultVacancyRepositoryTest {
         assertEquals(4, result.getOrThrow().applicationsCount)
     }
 
-    private fun repository(vacancyDao: VacancyDao) = DefaultVacancyRepository(
+    @Test
+    fun `getPublicVacanciesForSeeker marks favorite state in bulk`() = runBlocking {
+        val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
+        val repository = repository(FakeVacancyDao(), favoriteDao = favoriteDao)
+
+        val result = repository.getPublicVacanciesForSeeker(USER_ID, VacancyFilter(), limit = 7, offset = 3)
+
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrThrow().single().isFavorite)
+        assertEquals(SEEKER_ID to setOf(VACANCY_ID), favoriteDao.lastFavoriteIdsRequest)
+    }
+
+    @Test
+    fun `getPublicVacancyWithDetailsForSeeker marks missing favorite as false`() = runBlocking {
+        val repository = repository(FakeVacancyDao(), favoriteDao = FakeFavoriteVacancyDao(favoriteIds = emptySet()))
+
+        val result = repository.getPublicVacancyWithDetailsForSeeker(USER_ID, VACANCY_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(false, result.getOrThrow().isFavorite)
+    }
+
+    @Test
+    fun `guest public vacancy detail leaves favorite state absent`() = runBlocking {
+        val repository = repository(FakeVacancyDao())
+
+        val result = repository.getPublicVacancyWithDetails(VACANCY_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(false, result.getOrThrow().isFavorite)
+    }
+
+    private fun repository(
+        vacancyDao: VacancyDao,
+        favoriteDao: FavoriteVacancyDao = FakeFavoriteVacancyDao(),
+        seekerProfileDao: SeekerProfileDao = FakeSeekerProfileDao(),
+    ) = DefaultVacancyRepository(
         vacancyDao = vacancyDao,
         employerProfileDao = FakeEmployerProfileDao(),
+        seekerProfileDao = seekerProfileDao,
+        favoriteVacancyDao = favoriteDao,
     )
+
+    private class FakeFavoriteVacancyDao(
+        private val favoriteIds: Set<Long> = emptySet(),
+    ) : FavoriteVacancyDao {
+        var lastFavoriteIdsRequest: Pair<Long, Set<Long>>? = null
+            private set
+
+        override suspend fun addFavoriteVacancy(favorite: FavoriteVacancyEntity): Boolean = true
+        override suspend fun removeFavoriteVacancy(vacancyId: Long, jobSeekerId: Long): Boolean = true
+        override suspend fun getFavoriteVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
+        override suspend fun favoriteExists(vacancyId: Long, jobSeekerId: Long): Boolean = favoriteIds.contains(vacancyId)
+
+        override suspend fun getFavoriteVacancyIds(jobSeekerId: Long, vacancyIds: Set<Long>): Set<Long> {
+            lastFavoriteIdsRequest = jobSeekerId to vacancyIds
+            return favoriteIds.intersect(vacancyIds)
+        }
+    }
+
+    private class FakeSeekerProfileDao : SeekerProfileDao {
+        override suspend fun createProfile(profile: SeekerProfileEntity): Long = profile.id
+        override suspend fun getProfile(id: Long): SeekerProfileEntity? = seekerProfile()
+        override suspend fun getProfileByUserId(userId: Long): SeekerProfileEntity? = seekerProfile()
+        override suspend fun updateProfile(profile: SeekerProfileEntity): Boolean = true
+        override suspend fun deleteProfile(id: Long): Boolean = true
+        override suspend fun profileExists(userId: Long): Boolean = true
+        override suspend fun getProfileWithWorkExperienceByUserId(userId: Long): Pair<SeekerProfileEntity, List<WorkExperienceEntity>>? = seekerProfile() to emptyList()
+        override suspend fun getProfileWithWorkExperienceByProfileId(profileId: Long): Pair<SeekerProfileEntity, List<WorkExperienceEntity>>? = seekerProfile() to emptyList()
+    }
 
     private class FakeVacancyDao(
         private val detailStatus: VacancyStatusCode = VacancyStatusCode.ACTIVE,
@@ -211,6 +282,8 @@ class DefaultVacancyRepositoryTest {
     private companion object {
         const val VACANCY_ID = 13L
         const val COMPANY_ID = 17L
+        const val USER_ID = 19L
+        const val SEEKER_ID = 23L
         val NOW: Instant = Instant.parse("2026-05-04T00:00:00Z")
 
         fun vacancyEntity(
@@ -254,6 +327,16 @@ class DefaultVacancyRepositoryTest {
                 website = null,
                 description = "Hiring platform",
             ),
+        )
+
+        fun seekerProfile() = SeekerProfileEntity(
+            id = SEEKER_ID,
+            userId = USER_ID,
+            specialty = "Backend Developer",
+            experienceYears = 5,
+            desiredSalary = 5000,
+            aboutMe = null,
+            jobCategory = JobCategoryCode.SOFTWARE_DEV,
         )
     }
 }

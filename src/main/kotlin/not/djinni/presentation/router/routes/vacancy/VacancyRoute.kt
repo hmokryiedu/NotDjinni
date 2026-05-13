@@ -17,6 +17,7 @@ import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
 import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
+import not.djinni.presentation.router.routes.common.extension.getClaim
 import not.djinni.presentation.router.routes.common.extension.getUserIdFromTokenOrSendError
 import not.djinni.presentation.router.routes.common.request.JobCategoryRequest
 import not.djinni.presentation.router.routes.vacancy.mapper.*
@@ -42,29 +43,52 @@ class VacancyRoute(
     }
 
     private fun Routing.listVacancies() {
-        get<Vacancy> {
-            val queryParams = call.request.queryParameters
-            val filter = buildFilter(queryParams)
-            val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
-            val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-            vacancyRepository.getPublicVacancies(filter, limit, offset)
-                .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
-                .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+        authenticate(JwtAuth.NAME, optional = true) {
+            get<Vacancy> {
+                val queryParams = call.request.queryParameters
+                val filter = buildFilter(queryParams)
+                val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
+                val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
+                val userId = getClaim<Long>(JwtAuth.USER_ID_CLAIM_NAME)
+                if (userId == null) {
+                    vacancyRepository.getPublicVacancies(filter = filter, limit = limit, offset = offset)
+                        .onSuccess { vacancies -> call.respond(vacancies.toGuestResponseList()) }
+                        .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+                } else {
+                    vacancyRepository.getPublicVacanciesForSeeker(
+                        userId = userId,
+                        filter = filter,
+                        limit = limit,
+                        offset = offset
+                    )
+                        .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                        .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+                }
+            }
         }
     }
 
     private fun Routing.getVacancyById() {
-        get<Vacancy.ById> { resource ->
-            vacancyRepository.getPublicVacancyWithDetails(resource.id)
-                .onSuccess { call.respond(it.toResponse()) }
-                .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+        authenticate(JwtAuth.NAME, optional = true) {
+            get<Vacancy.ById> { resource ->
+                val userId = getClaim<Long>(JwtAuth.USER_ID_CLAIM_NAME)
+                if (userId == null) {
+                    vacancyRepository.getPublicVacancyWithDetails(resource.id)
+                        .onSuccess { call.respond(it.toGuestResponse()) }
+                        .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+                } else {
+                    vacancyRepository.getPublicVacancyWithDetailsForSeeker(userId, resource.id)
+                        .onSuccess { call.respond(it.toResponse()) }
+                        .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+                }
+            }
         }
     }
 
     private fun Routing.getRecentVacancies() {
         get<Vacancy.Recent> { resource ->
             vacancyRepository.getPublicRecentVacancies(resource.limit)
-                .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                .onSuccess { vacancies -> call.respond(vacancies.toGuestResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
     }
@@ -75,7 +99,7 @@ class VacancyRoute(
             val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
             val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
             vacancyRepository.getPublicCompanyVacancies(resource.companyId, limit, offset)
-                .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                .onSuccess { vacancies -> call.respond(vacancies.toGuestResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
     }

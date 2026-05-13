@@ -14,5 +14,6 @@ data class Vacancy(
     val status: VacancyStatusCode,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val applicationsCount: Int = 0
+    val applicationsCount: Int = 0,
+    val isFavorite: Boolean = false,
 )

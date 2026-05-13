@@ -46,7 +46,7 @@ class EmployerRoute(
             get<Employer.Profile> {
                 val userId = getUserIdFromTokenOrSendError() ?: return@get
                 employerProfileRepository.getProfile(userId)
-                    .onSuccess { call.respond(it.toResponse()) }
+                    .onSuccess { call.respond(message = it.toResponse()) }
                     .handleError(call = call, mapToCode = EmployerProfileException::toStatusCode)
             }
         }
@@ -57,10 +57,8 @@ class EmployerRoute(
             post<Employer.Profile> {
                 val userId = getUserIdFromTokenOrSendError() ?: return@post
                 val request = call.receive<CreateEmployerProfileRequest>()
-                employerProfileRepository.createProfile(userId, request.toDomain())
-                    .onSuccess {
-                        call.respond(status = HttpStatusCode.Created, message = it.toResponse())
-                    }
+                employerProfileRepository.createProfile(userId = userId, profile = request.toDomain())
+                    .onSuccess { call.respond(status = HttpStatusCode.Created, message = it.toResponse()) }
                     .handleError(call = call, mapToCode = EmployerProfileException::toStatusCode)
             }
         }
