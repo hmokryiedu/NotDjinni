@@ -15,4 +15,10 @@ class Seeker {
 
     @Resource("vacancy")
     class Vacancies(val parent: Seeker = Seeker())
+
+    @Resource("templates")
+    class Templates(val parent: Seeker = Seeker())
+
+    @Resource("templates/{id}")
+    class TemplateById(val parent: Seeker = Seeker(), val id: Long)
 }
