@@ -9,7 +9,9 @@ import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import not.djinni.domain.exception.seeker.SeekerProfileException
+import not.djinni.domain.exception.viewed.ViewedVacancyException
 import not.djinni.domain.repository.SeekerProfileRepository
+import not.djinni.domain.repository.ViewedVacancyRepository
 import not.djinni.domain.usecase.vacancy.GetRecommendedVacanciesForSeekerUseCase
 import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
@@ -24,12 +26,15 @@ import not.djinni.presentation.router.routes.seeker.request.UpdateProfileRequest
 import not.djinni.presentation.router.routes.seeker.request.WorkExperienceRequest
 import not.djinni.presentation.router.routes.seeker.resources.Seeker
 import not.djinni.presentation.router.routes.vacancy.mapper.toResponseList
+import not.djinni.presentation.router.routes.vacancy.mapper.toViewedResponseList
+import not.djinni.presentation.router.routes.viewed.mapper.toStatusCode
 import org.koin.core.annotation.Single
 
 @Single
 class SeekerRoute(
     private val seekerProfileRepository: SeekerProfileRepository,
     private val getRecommendedVacanciesForSeekerUseCase: GetRecommendedVacanciesForSeekerUseCase,
+    private val viewedVacancyRepository: ViewedVacancyRepository,
 ) : Route {
 
     override fun install(root: Routing) = with(root) {
@@ -41,6 +46,21 @@ class SeekerRoute(
         updateWorkExperience()
         deleteWorkExperience()
         getRecommendedVacancies()
+        getViewedVacancies()
+    }
+
+    private fun Routing.getViewedVacancies() {
+        authenticate(JwtAuth.NAME) {
+            get<Seeker.ViewedVacancies> {
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
+                val queryParams = call.request.queryParameters
+                val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
+                val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
+                viewedVacancyRepository.getViewedVacancies(userId = userId, limit = limit, offset = offset)
+                    .onSuccess { viewedVacancies -> call.respond(viewedVacancies.toViewedResponseList()) }
+                    .handleError(call = call, mapToCode = ViewedVacancyException::toStatusCode)
+            }
+        }
     }
 
     private fun Routing.getRecommendedVacancies() {

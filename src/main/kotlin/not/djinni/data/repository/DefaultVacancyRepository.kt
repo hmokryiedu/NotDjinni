@@ -128,11 +128,12 @@ class DefaultVacancyRepository(
     }
 
     override suspend fun getPublicVacancyWithDetailsForSeeker(userId: Long, id: Long) = runCatching {
-        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
-            throw VacancyException.Unauthorized("No seeker profile found")
-        }
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId)
         val vacancy = vacancyDao.getVacancyWithDetails(id) ?: throw VacancyException.VacancyNotFound()
         if (vacancy.vacancy.status != VacancyStatusCode.ACTIVE) throw VacancyException.VacancyNotFound()
+        if (seekerProfile == null) {
+            return@runCatching vacancy.toDomain()
+        }
         val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
             jobSeekerId = seekerProfile.id,
             vacancyIds = setOf(id),

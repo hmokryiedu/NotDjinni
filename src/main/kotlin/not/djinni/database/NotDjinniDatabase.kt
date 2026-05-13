@@ -11,6 +11,7 @@ import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.EmployerProfileTable
 import not.djinni.database.impl.favorite.FavoriteVacancyTable
 import not.djinni.database.impl.vacancy.VacancyTable
+import not.djinni.database.impl.viewed.ViewedVacancyTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
@@ -41,6 +42,7 @@ object NotDjinniDatabase {
                 VacancyTable,
                 ApplicationTable,
                 FavoriteVacancyTable,
+                ViewedVacancyTable,
                 TemplateTable,
             )
             addLogger(StdOutSqlLogger)

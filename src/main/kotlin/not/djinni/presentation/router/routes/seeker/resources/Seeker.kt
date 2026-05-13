@@ -21,4 +21,7 @@ class Seeker {
 
     @Resource("templates/{id}")
     class TemplateById(val parent: Seeker = Seeker(), val id: Long)
+
+    @Resource("viewed-vacancies")
+    class ViewedVacancies(val parent: Seeker = Seeker())
 }

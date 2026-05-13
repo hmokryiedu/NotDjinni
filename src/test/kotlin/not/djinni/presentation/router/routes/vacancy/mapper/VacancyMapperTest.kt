@@ -14,6 +14,7 @@ import not.djinni.model.vacancy.EmploymentTypeCode
 import not.djinni.model.vacancy.JobCategoryCode
 import not.djinni.model.vacancy.Salary
 import not.djinni.model.vacancy.VacancyStatusCode
+import not.djinni.model.vacancy.ViewedVacancyWithDetails
 import not.djinni.model.vacancy.VacancyWithDetails
 import not.djinni.model.role.Company
 
@@ -44,6 +45,21 @@ class VacancyMapperTest {
 
         assertTrue(json.parseToJsonElement(favoriteJson).jsonObject["is_favorite"]?.jsonPrimitive?.boolean == true)
         assertTrue(json.parseToJsonElement(notFavoriteJson).jsonObject["is_favorite"]?.jsonPrimitive?.boolean == false)
+    }
+
+    @Test
+    fun `maps viewed vacancy list to viewed_at views_count and nested vacancy`() {
+        val response = listOf(
+            ViewedVacancyWithDetails(
+                viewedAt = Instant.parse("2026-05-13T12:00:00Z"),
+                viewsCount = 3,
+                vacancy = vacancy(applicationsCount = 5),
+            )
+        ).toViewedResponseList()
+
+        assertEquals("2026-05-13T12:00:00Z", response.viewedVacancies.single().viewedAt)
+        assertEquals(3, response.viewedVacancies.single().viewsCount)
+        assertEquals(5, response.viewedVacancies.single().vacancy.applicationsCount)
     }
 
     @Test
