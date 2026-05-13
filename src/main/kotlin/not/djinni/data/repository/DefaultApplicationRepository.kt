@@ -85,6 +85,33 @@ class DefaultApplicationRepository(
         if (!deleted) throw ApplicationException.ApplicationNotFound()
     }
 
+    override suspend fun withdrawApplication(userId: Long, id: Long) = runCatching<Unit> {
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
+            throw ApplicationException.SeekerProfileNotFound()
+        }
+        val existing = applicationDao.getApplication(id) ?: run {
+            throw ApplicationException.ApplicationNotFound()
+        }
+        if (existing.application.jobSeekerId != seekerProfile.id) throw ApplicationException.Unauthorized()
+
+        when (existing.application.statusCode) {
+            ApplicationStatusCode.WITHDRAWN -> return@runCatching
+            ApplicationStatusCode.HIRED,
+            ApplicationStatusCode.REJECTED -> throw ApplicationException.InvalidApplicationData(
+                "Cannot withdraw application with status ${existing.application.statusCode}"
+            )
+
+            ApplicationStatusCode.APPLIED,
+            ApplicationStatusCode.REVIEWING,
+            ApplicationStatusCode.INTERVIEW,
+            ApplicationStatusCode.TEST_TASK,
+            ApplicationStatusCode.OFFER -> {
+                val updated = applicationDao.updateApplicationStatus(id, ApplicationStatusCode.WITHDRAWN)
+                if (!updated) throw ApplicationException.ApplicationNotFound()
+            }
+        }
+    }
+
     override suspend fun updateApplicationStatus(
         userId: Long,
         id: Long,

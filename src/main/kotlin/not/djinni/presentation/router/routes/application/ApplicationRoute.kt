@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
+import io.ktor.server.resources.patch
 import io.ktor.server.resources.post
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
@@ -38,6 +39,7 @@ class ApplicationRoute(
         getApplicationById()
         updateApplication()
         deleteApplication()
+        withdrawApplication()
         updateApplicationStatus()
         getVacancyApplications()
         hasApplied()
@@ -126,6 +128,17 @@ class ApplicationRoute(
                 val userId = getUserIdFromTokenOrSendError() ?: return@delete
                 applicationRepository.deleteApplication(userId = userId, id = resource.id)
                     .onSuccess { call.respond("Application deleted successfully".toMessageResponse()) }
+                    .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
+            }
+        }
+    }
+
+    private fun Routing.withdrawApplication() {
+        authenticate(JwtAuth.NAME) {
+            patch<Application.Withdraw> { resource ->
+                val userId = getUserIdFromTokenOrSendError() ?: return@patch
+                applicationRepository.withdrawApplication(userId = userId, id = resource.id)
+                    .onSuccess { call.respond("Application withdrawn successfully".toMessageResponse()) }
                     .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
             }
         }
