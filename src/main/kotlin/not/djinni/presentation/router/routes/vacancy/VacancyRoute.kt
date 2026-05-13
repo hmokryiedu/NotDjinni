@@ -13,6 +13,7 @@ import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.database.api.vacancy.VacancySortField
 import not.djinni.domain.exception.vacancy.VacancyException
 import not.djinni.domain.repository.VacancyRepository
+import not.djinni.domain.repository.ViewedVacancyRepository
 import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
 import not.djinni.presentation.router.routes.Route
@@ -28,7 +29,8 @@ import org.koin.core.annotation.Single
 
 @Single
 class VacancyRoute(
-    private val vacancyRepository: VacancyRepository
+    private val vacancyRepository: VacancyRepository,
+    private val viewedVacancyRepository: ViewedVacancyRepository,
 ) : Route {
 
     override fun install(root: Routing) = with(root) {
@@ -78,7 +80,10 @@ class VacancyRoute(
                         .handleError(call = call, mapToCode = VacancyException::toStatusCode)
                 } else {
                     vacancyRepository.getPublicVacancyWithDetailsForSeeker(userId, resource.id)
-                        .onSuccess { call.respond(it.toResponse()) }
+                        .onSuccess { vacancy ->
+                            viewedVacancyRepository.trackViewedVacancy(userId = userId, vacancyId = resource.id)
+                            call.respond(vacancy.toResponse())
+                        }
                         .handleError(call = call, mapToCode = VacancyException::toStatusCode)
                 }
             }

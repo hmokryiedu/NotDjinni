@@ -15,4 +15,7 @@ class Seeker {
 
     @Resource("vacancy")
     class Vacancies(val parent: Seeker = Seeker())
+
+    @Resource("viewed-vacancies")
+    class ViewedVacancies(val parent: Seeker = Seeker())
 }

@@ -2,9 +2,11 @@ package not.djinni.data.mapper
 
 import not.djinni.database.api.vacancy.VacancyEntity
 import not.djinni.database.api.vacancy.VacancyWithDetailsEntity
+import not.djinni.database.api.viewed.ViewedVacancyWithDetailsEntity
 import not.djinni.model.vacancy.Salary
 import not.djinni.model.vacancy.Vacancy
 import not.djinni.model.vacancy.VacancyWithDetails
+import not.djinni.model.vacancy.ViewedVacancyWithDetails
 
 fun VacancyEntity.toDomain() = Vacancy(
     id = id,
@@ -52,4 +54,10 @@ fun VacancyWithDetailsEntity.toDomain() = VacancyWithDetails(
     updatedAt = vacancy.updatedAt,
     applicationsCount = applicationsCount,
     isFavorite = vacancy.isFavorite,
+)
+
+fun ViewedVacancyWithDetailsEntity.toDomain() = ViewedVacancyWithDetails(
+    viewedAt = viewedAt,
+    viewsCount = viewsCount,
+    vacancy = vacancy.toDomain(),
 )

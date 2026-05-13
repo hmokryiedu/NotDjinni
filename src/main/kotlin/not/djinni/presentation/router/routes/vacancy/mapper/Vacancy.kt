@@ -16,6 +16,8 @@ import not.djinni.presentation.router.routes.vacancy.response.VacancyGuestWithDe
 import not.djinni.presentation.router.routes.vacancy.response.VacancyListResponse
 import not.djinni.presentation.router.routes.vacancy.response.VacancyResponse
 import not.djinni.presentation.router.routes.vacancy.response.VacancyWithDetailsListResponse
+import not.djinni.presentation.router.routes.viewed.response.ViewedVacancyListResponse
+import not.djinni.presentation.router.routes.viewed.response.ViewedVacancyResponse
 
 fun EmploymentTypeRequest.toDomain() = EmploymentTypeCode.valueOf(name)
 
@@ -137,4 +139,14 @@ fun List<VacancyWithDetails>.toResponseList() = VacancyWithDetailsListResponse(
 
 fun List<VacancyWithDetails>.toGuestResponseList() = VacancyGuestWithDetailsListResponse(
     vacancies = map { it.toGuestResponse() }
+)
+
+fun ViewedVacancyWithDetails.toViewedResponse() = ViewedVacancyResponse(
+    viewedAt = viewedAt.toString(),
+    viewsCount = viewsCount,
+    vacancy = vacancy.toResponse(),
+)
+
+fun List<ViewedVacancyWithDetails>.toViewedResponseList() = ViewedVacancyListResponse(
+    viewedVacancies = map { it.toViewedResponse() }
 )
