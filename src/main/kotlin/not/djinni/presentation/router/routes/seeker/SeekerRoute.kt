@@ -23,7 +23,6 @@ import not.djinni.presentation.router.routes.seeker.request.CreateProfileRequest
 import not.djinni.presentation.router.routes.seeker.request.UpdateProfileRequest
 import not.djinni.presentation.router.routes.seeker.request.WorkExperienceRequest
 import not.djinni.presentation.router.routes.seeker.resources.Seeker
-import not.djinni.presentation.router.routes.seeker.response.WorkExperienceIdResponse
 import not.djinni.presentation.router.routes.vacancy.mapper.toResponseList
 import org.koin.core.annotation.Single
 
@@ -90,7 +89,7 @@ class SeekerRoute(
                 val userId = getUserIdFromTokenOrSendError() ?: return@put
                 val request = call.receive<UpdateProfileRequest>()
                 seekerProfileRepository.updateProfile(userId, request.toDomain())
-                    .onSuccess { call.respond("Profile updated successfully".toMessageResponse()) }
+                    .onSuccess { call.respond(it.toResponse()) }
                     .handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
             }
         }
@@ -113,8 +112,8 @@ class SeekerRoute(
                 val userId = getUserIdFromTokenOrSendError() ?: return@post
                 val request = call.receive<WorkExperienceRequest>()
                 seekerProfileRepository.addWorkExperience(userId, request.toDomain())
-                    .onSuccess { experienceId ->
-                        call.respond(status = HttpStatusCode.Created, message = WorkExperienceIdResponse(experienceId))
+                    .onSuccess { profile ->
+                        call.respond(status = HttpStatusCode.Created, message = profile.toResponse())
                     }
                     .handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
             }
@@ -131,10 +130,7 @@ class SeekerRoute(
                     experienceId = resource.id,
                     experience = request.toDomain()
                 ).onSuccess {
-                    call.respond(
-                        status = HttpStatusCode.OK,
-                        message = mapOf("message" to "Work experience updated successfully")
-                    )
+                    call.respond(status = HttpStatusCode.OK, message = it.toResponse())
                 }.handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
             }
         }
@@ -145,7 +141,7 @@ class SeekerRoute(
             delete<Seeker.ExperienceById> { resource ->
                 val userId = getUserIdFromTokenOrSendError() ?: return@delete
                 seekerProfileRepository.deleteWorkExperience(userId, resource.id)
-                    .onSuccess { call.respond("Work experience deleted successfully".toMessageResponse()) }
+                    .onSuccess { call.respond(it.toResponse()) }
                     .handleError(call = call, mapToCode = SeekerProfileException::toStatusCode)
             }
         }

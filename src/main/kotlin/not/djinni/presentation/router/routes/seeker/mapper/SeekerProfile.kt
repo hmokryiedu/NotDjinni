@@ -58,7 +58,7 @@ fun UpdateProfileRequest.toDomain(): SeekerProfile {
         desiredSalary = desiredSalary,
         experienceYears = experienceYears,
         jobCategory = jobCategory.toDomain(),
-        workExperience = workExperience.map { it.toDomain() }
+        workExperience = emptyList()
     )
 }
 
