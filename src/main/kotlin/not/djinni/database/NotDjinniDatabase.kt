@@ -3,6 +3,7 @@ package not.djinni.database
 import kotlinx.coroutines.Dispatchers
 import not.djinni.database.impl.application.ApplicationTable
 import not.djinni.database.impl.token.RefreshTokenTable
+import not.djinni.database.impl.template.TemplateTable
 import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.seeker.WorkExperienceTable
 import not.djinni.database.impl.user.UserTable
@@ -40,6 +41,7 @@ object NotDjinniDatabase {
                 VacancyTable,
                 ApplicationTable,
                 FavoriteVacancyTable,
+                TemplateTable,
             )
             addLogger(StdOutSqlLogger)
         }
