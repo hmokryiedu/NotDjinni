@@ -8,6 +8,8 @@ Description: Add seeker-owned cover letter template CRUD. Store title, content, 
 Description: Verify vacancy detail response has all fields needed to prefill the create vacancy form, and reuse the existing create vacancy endpoint for duplicate submission. Do not add a dedicated duplicate endpoint, and do not copy generated/system fields such as ID, status, posted date, updated date, application count, or applications. Align create vacancy validation only where copied values expose existing gaps.
 
 ## Vacancy Application Count
+Status: Needs testing
+
 Description: Verify employer vacancy list and detail responses include `applicationCount`. Count applications per vacancy and company, include `WITHDRAWN` unless a separate active-only field is later added, and keep the count stable across application status updates. Cover zero, multiple applications, cross-vacancy, cross-company, list, and detail scenarios.
 
 ## Withdraw Application

@@ -3,9 +3,11 @@ package not.djinni.data.repository
 import kotlinx.datetime.Clock
 import not.djinni.data.mapper.toDomain
 import not.djinni.data.mapper.toEntity
+import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.EmployerProfileDao
 import not.djinni.database.api.vacancy.VacancyDao
 import not.djinni.database.api.vacancy.VacancyFilter
+import not.djinni.database.api.vacancy.VacancySortField
 import not.djinni.domain.exception.vacancy.VacancyException
 import not.djinni.domain.repository.VacancyRepository
 import not.djinni.model.vacancy.Vacancy
@@ -74,6 +76,30 @@ class DefaultVacancyRepository(
         vacancyDao.getVacanciesWithDetails(filter, limit, offset).map { it.toDomain() }
     }
 
+    override suspend fun getPublicVacancies(filter: VacancyFilter, limit: Int, offset: Int) = runCatching {
+        vacancyDao.getVacanciesWithDetails(filter.forceActive(), limit, offset).map { it.toDomain() }
+    }
+
+    override suspend fun getPublicVacancyWithDetails(id: Long) = runCatching {
+        val vacancy = vacancyDao.getVacancyWithDetails(id)?.toDomain() ?: throw VacancyException.VacancyNotFound()
+        if (vacancy.status != VacancyStatusCode.ACTIVE) throw VacancyException.VacancyNotFound()
+        vacancy
+    }
+
+    override suspend fun getPublicRecentVacancies(limit: Int) = runCatching {
+        val filter = VacancyFilter(
+            statuses = listOf(VacancyStatusCode.ACTIVE),
+            sortBy = VacancySortField.CREATED_AT,
+            sortDirection = SortDirection.DESC,
+        )
+        vacancyDao.getVacanciesWithDetails(filter, limit, offset = 0).map { it.toDomain() }
+    }
+
+    override suspend fun getPublicCompanyVacancies(companyId: Long, limit: Int, offset: Int) = runCatching {
+        val filter = VacancyFilter(companyId = companyId).forceActive()
+        vacancyDao.getVacanciesWithDetails(filter, limit, offset).map { it.toDomain() }
+    }
+
     override suspend fun countVacancies(filter: VacancyFilter) = runCatching {
         vacancyDao.countVacancies(filter)
     }
@@ -110,4 +136,6 @@ class DefaultVacancyRepository(
         val updated = vacancyDao.updateVacancyStatus(id, status)
         if (!updated) throw VacancyException.VacancyNotFound()
     }
+
+    private fun VacancyFilter.forceActive() = copy(statuses = listOf(VacancyStatusCode.ACTIVE))
 }

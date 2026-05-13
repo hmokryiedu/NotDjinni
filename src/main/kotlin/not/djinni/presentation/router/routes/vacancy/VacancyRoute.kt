@@ -47,7 +47,7 @@ class VacancyRoute(
             val filter = buildFilter(queryParams)
             val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
             val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-            vacancyRepository.getVacancies(filter, limit, offset)
+            vacancyRepository.getPublicVacancies(filter, limit, offset)
                 .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
@@ -55,7 +55,7 @@ class VacancyRoute(
 
     private fun Routing.getVacancyById() {
         get<Vacancy.ById> { resource ->
-            vacancyRepository.getVacancyWithDetails(resource.id)
+            vacancyRepository.getPublicVacancyWithDetails(resource.id)
                 .onSuccess { call.respond(it.toResponse()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
@@ -63,7 +63,7 @@ class VacancyRoute(
 
     private fun Routing.getRecentVacancies() {
         get<Vacancy.Recent> { resource ->
-            vacancyRepository.getRecentVacancies(resource.limit)
+            vacancyRepository.getPublicRecentVacancies(resource.limit)
                 .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
@@ -74,7 +74,7 @@ class VacancyRoute(
             val queryParams = call.request.queryParameters
             val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
             val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-            vacancyRepository.getCompanyVacancies(resource.companyId, limit, offset)
+            vacancyRepository.getPublicCompanyVacancies(resource.companyId, limit, offset)
                 .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
         }
