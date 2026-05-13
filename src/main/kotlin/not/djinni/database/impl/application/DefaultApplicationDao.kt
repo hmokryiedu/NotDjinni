@@ -5,12 +5,14 @@ import not.djinni.database.NotDjinniDatabase.runQuery
 import not.djinni.database.api.application.*
 import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.CompanyEntity
+import not.djinni.database.api.vacancy.VacancyWithDetailsEntity
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.seeker.SeekerProfileTableEntity
 import not.djinni.database.impl.seeker.toEntity
 import not.djinni.database.impl.vacancy.VacancyTable
 import not.djinni.database.impl.vacancy.VacancyTableEntity
+import not.djinni.database.impl.vacancy.countApplicationsByVacancyIds
 import not.djinni.database.impl.vacancy.toEntity
 import not.djinni.model.application.ApplicationStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
@@ -37,18 +39,20 @@ class DefaultApplicationDao : ApplicationDao {
         val vacancy = VacancyTableEntity.findById(app.vacancyId.value) ?: return@runQuery null
         val seeker = SeekerProfileTableEntity.findById(app.jobSeekerId.value) ?: return@runQuery null
         val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: return@runQuery null
+        val applicationsCount = countApplicationsByVacancyIds(listOf(vacancy.id.value))[vacancy.id.value] ?: 0
 
         ApplicationWithDetailsEntity(
             application = app.toEntity(),
             jobSeeker = seeker.toEntity(),
-            vacancy = not.djinni.database.api.vacancy.VacancyWithDetailsEntity(
-                vacancy = vacancy.toEntity(),
+            vacancy = VacancyWithDetailsEntity(
+                vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
                 company = CompanyEntity(
                     id = company.id.value,
                     companyName = company.companyName,
                     website = company.website,
                     description = company.description
-                )
+                ),
+                applicationsCount = applicationsCount,
             )
         )
     }
@@ -77,25 +81,30 @@ class DefaultApplicationDao : ApplicationDao {
         limit: Int,
         offset: Int
     ): List<ApplicationWithDetailsEntity> = runQuery {
-        filter.buildApplicationQuery()
+        val applications = filter.buildApplicationQuery()
             .limit(limit, offset.toLong())
+            .map { ApplicationTableEntity.wrapRow(it) }
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(applications.map { it.vacancyId.value })
+        applications
             .mapNotNull { row ->
-                val app = ApplicationTableEntity.wrapRow(row)
+                val app = row
                 val vacancy = VacancyTableEntity.findById(app.vacancyId.value) ?: return@mapNotNull null
                 val seeker = SeekerProfileTableEntity.findById(app.jobSeekerId.value) ?: return@mapNotNull null
                 val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: return@mapNotNull null
+                val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
 
                 ApplicationWithDetailsEntity(
                     application = app.toEntity(),
                     jobSeeker = seeker.toEntity(),
-                    vacancy = not.djinni.database.api.vacancy.VacancyWithDetailsEntity(
-                        vacancy = vacancy.toEntity(),
+                    vacancy = VacancyWithDetailsEntity(
+                        vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
                         company = CompanyEntity(
                             id = company.id.value,
                             companyName = company.companyName,
                             website = company.website,
                             description = company.description
-                        )
+                        ),
+                        applicationsCount = applicationsCount,
                     )
                 )
             }

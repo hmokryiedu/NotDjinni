@@ -5,11 +5,9 @@ import not.djinni.database.NotDjinniDatabase.runQuery
 import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.vacancy.*
-import not.djinni.database.impl.application.ApplicationTable
 import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.employer.toEntity
-import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -178,20 +176,4 @@ class DefaultVacancyDao : VacancyDao {
         }
     }
 
-    private fun countApplicationsByVacancyIds(vacancyIds: List<Long>): Map<Long, Int> {
-        if (vacancyIds.isEmpty()) return emptyMap()
-
-        val vacancyEntityIds = vacancyIds.map { EntityID(it, VacancyTable) }
-        val countExpression = ApplicationTable.id.count()
-        return ApplicationTable
-            .select(ApplicationTable.vacancyId, countExpression)
-            .where {
-                (ApplicationTable.vacancyId inList vacancyEntityIds) and
-                    (ApplicationTable.statusCode neq ApplicationStatusCode.WITHDRAWN)
-            }
-            .groupBy(ApplicationTable.vacancyId)
-            .associate { row ->
-                row[ApplicationTable.vacancyId].value to row[countExpression].toInt()
-            }
-    }
 }

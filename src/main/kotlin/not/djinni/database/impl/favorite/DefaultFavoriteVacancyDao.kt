@@ -10,6 +10,7 @@ import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.vacancy.VacancyTable
 import not.djinni.database.impl.vacancy.VacancyTableEntity
+import not.djinni.database.impl.vacancy.countApplicationsByVacancyIds
 import not.djinni.database.impl.vacancy.toEntity
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -24,7 +25,7 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
     override suspend fun addFavoriteVacancy(favorite: FavoriteVacancyEntity): Boolean = runQuery {
         val exists = !FavoriteVacancyTableEntity.find {
             (FavoriteVacancyTable.vacancyId eq EntityID(favorite.vacancyId, VacancyTable)) and
-                (FavoriteVacancyTable.jobSeekerId eq EntityID(favorite.jobSeekerId, SeekerProfileTable))
+                    (FavoriteVacancyTable.jobSeekerId eq EntityID(favorite.jobSeekerId, SeekerProfileTable))
         }.empty()
         if (exists) return@runQuery true
         FavoriteVacancyTableEntity.new {
@@ -38,7 +39,7 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
     override suspend fun removeFavoriteVacancy(vacancyId: Long, jobSeekerId: Long): Boolean = runQuery {
         FavoriteVacancyTable.deleteWhere {
             (FavoriteVacancyTable.vacancyId eq EntityID(vacancyId, VacancyTable)) and
-                (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable))
+                    (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable))
         } > 0
     }
 
@@ -47,22 +48,27 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
         limit: Int,
         offset: Int,
     ): List<VacancyWithDetailsEntity> = runQuery {
-        FavoriteVacancyTableEntity.find {
+        val favorites = FavoriteVacancyTableEntity.find {
             FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable)
         }
             .orderBy(FavoriteVacancyTable.createdAt to SortOrder.DESC)
             .limit(limit, offset.toLong())
+            .toList()
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(favorites.map { it.vacancyId.value })
+        favorites
             .mapNotNull { favorite ->
                 val vacancy = VacancyTableEntity.findById(favorite.vacancyId.value) ?: return@mapNotNull null
                 val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: return@mapNotNull null
+                val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity(),
+                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
                     company = CompanyEntity(
                         id = company.id.value,
                         companyName = company.companyName,
                         website = company.website,
                         description = company.description,
-                    )
+                    ),
+                    applicationsCount = applicationsCount,
                 )
             }
     }
@@ -70,7 +76,7 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
     override suspend fun favoriteExists(vacancyId: Long, jobSeekerId: Long): Boolean = runQuery {
         !FavoriteVacancyTableEntity.find {
             (FavoriteVacancyTable.vacancyId eq EntityID(vacancyId, VacancyTable)) and
-                (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable))
+                    (FavoriteVacancyTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable))
         }.empty()
     }
 }
