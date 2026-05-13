@@ -5,9 +5,11 @@ import not.djinni.database.NotDjinniDatabase.runQuery
 import not.djinni.database.api.common.SortDirection
 import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.vacancy.*
+import not.djinni.database.impl.application.ApplicationTable
 import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.employer.toEntity
+import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -98,6 +100,33 @@ class DefaultVacancyDao : VacancyDao {
                     applicationsCount = applicationsCount
                 )
             }
+    }
+
+    override suspend fun getAppliedVacancies(
+        jobSeekerId: Long,
+        limit: Int,
+        offset: Int,
+    ): List<VacancyWithDetailsEntity> = runQuery {
+        val rows = VacancyTable
+            .innerJoin(ApplicationTable, { VacancyTable.id }, { ApplicationTable.vacancyId })
+            .innerJoin(CompanyTable, { VacancyTable.companyId }, { CompanyTable.id })
+            .selectAll()
+            .where { ApplicationTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable) }
+            .orderBy(ApplicationTable.createdAt to SortOrder.DESC)
+            .limit(n = limit, offset = offset.toLong())
+            .toList()
+        val vacancies = rows.map { VacancyTableEntity.wrapRow(it) }
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        rows.map { row ->
+            val vacancy = VacancyTableEntity.wrapRow(row)
+            val company = CompanyTableEntity.wrapRow(row)
+            val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+            VacancyWithDetailsEntity(
+                vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                company = company.toEntity(),
+                applicationsCount = applicationsCount,
+            )
+        }
     }
 
     override suspend fun countVacancies(filter: VacancyFilter): Int = runQuery {

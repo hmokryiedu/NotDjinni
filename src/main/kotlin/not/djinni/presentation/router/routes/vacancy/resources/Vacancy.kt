@@ -12,6 +12,9 @@ class Vacancy {
 
     @Resource("recent")
     class Recent(val parent: Vacancy = Vacancy(), val limit: Int = 10)
+
+    @Resource("applied")
+    class Applied(val parent: Vacancy = Vacancy())
 }
 
 @Resource("/company/{companyId}/vacancies")

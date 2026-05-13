@@ -103,6 +103,24 @@ class DefaultVacancyRepository(
         }
     }
 
+    override suspend fun getAppliedVacancies(userId: Long, limit: Int, offset: Int) = runCatching {
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
+            throw VacancyException.Unauthorized("No seeker profile found")
+        }
+        val vacancies = vacancyDao.getAppliedVacancies(
+            jobSeekerId = seekerProfile.id,
+            limit = limit,
+            offset = offset,
+        )
+        val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
+            jobSeekerId = seekerProfile.id,
+            vacancyIds = vacancies.map { it.vacancy.id }.toSet(),
+        )
+        vacancies.map { vacancy ->
+            vacancy.copy(vacancy = vacancy.vacancy.copy(isFavorite = favoriteVacancyIds.contains(vacancy.vacancy.id))).toDomain()
+        }
+    }
+
     override suspend fun getPublicVacancyWithDetails(id: Long) = runCatching {
         val vacancy = vacancyDao.getVacancyWithDetails(id)?.toDomain() ?: throw VacancyException.VacancyNotFound()
         if (vacancy.status != VacancyStatusCode.ACTIVE) throw VacancyException.VacancyNotFound()

@@ -33,6 +33,7 @@ class VacancyRoute(
 
     override fun install(root: Routing) = with(root) {
         listVacancies()
+        getAppliedVacancies()
         getVacancyById()
         getRecentVacancies()
         getCompanyVacancies()
@@ -101,6 +102,20 @@ class VacancyRoute(
             vacancyRepository.getPublicCompanyVacancies(resource.companyId, limit, offset)
                 .onSuccess { vacancies -> call.respond(vacancies.toGuestResponseList()) }
                 .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+        }
+    }
+
+    private fun Routing.getAppliedVacancies() {
+        authenticate(JwtAuth.NAME) {
+            get<Vacancy.Applied> {
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
+                val queryParams = call.request.queryParameters
+                val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
+                val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
+                vacancyRepository.getAppliedVacancies(userId = userId, limit = limit, offset = offset)
+                    .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
+                    .handleError(call = call, mapToCode = VacancyException::toStatusCode)
+            }
         }
     }
 

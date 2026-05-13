@@ -46,6 +46,15 @@ class VacancyMapperTest {
         assertTrue(json.parseToJsonElement(notFavoriteJson).jsonObject["is_favorite"]?.jsonPrimitive?.boolean == false)
     }
 
+    @Test
+    fun `authenticated vacancy list response omits application fields`() {
+        val json = json.encodeToString(listOf(vacancy()).toResponseList())
+
+        assertFalse(json.contains("application_id"))
+        assertFalse(json.contains("cover_letter"))
+        assertFalse(json.contains("job_seeker"))
+    }
+
     private fun vacancy(
         applicationsCount: Int = 0,
         isFavorite: Boolean = false,
