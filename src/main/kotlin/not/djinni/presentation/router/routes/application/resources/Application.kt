@@ -13,6 +13,9 @@ class Application {
     @Resource("{id}/status")
     data class Status(val parent: Application = Application(), val id: Long)
 
+    @Resource("{id}/withdraw")
+    data class Withdraw(val parent: Application = Application(), val id: Long)
+
     @Resource("check/vacancy/{vacancyId}")
     data class CheckByVacancy(val parent: Application = Application(), val vacancyId: Long)
 }
