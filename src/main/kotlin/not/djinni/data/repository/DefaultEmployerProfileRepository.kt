@@ -15,13 +15,13 @@ class DefaultEmployerProfileRepository(
     private val companyDao: CompanyDao
 ) : EmployerProfileRepository {
 
-    override suspend fun getProfile(userId: Long) = runCatching {
+    override suspend fun getProfile(userId: Long) = runEmployerProfileCatching {
         employerProfileDao.getProfileByUserId(userId)
             ?.toProfileWithCompanyDomain()
             ?: throw EmployerProfileException.ProfileNotFound()
     }
 
-    override suspend fun createProfile(userId: Long, profile: EmployerProfile) = runCatching {
+    override suspend fun createProfile(userId: Long, profile: EmployerProfile) = runEmployerProfileCatching {
         if (employerProfileDao.profileExists(userId)) {
             throw EmployerProfileException.ProfileAlreadyExists()
         }
@@ -34,20 +34,33 @@ class DefaultEmployerProfileRepository(
             ?: throw EmployerProfileException.ProfileNotFound()
     }
 
-    override suspend fun updateProfile(userId: Long, role: String) = runCatching<Unit> {
+    override suspend fun updateProfile(userId: Long, role: String) = runEmployerProfileCatching {
+        if (role.isBlank()) throw EmployerProfileException.InvalidProfileData("Role cannot be blank")
         val existingProfile = employerProfileDao.getProfileByUserId(userId)
             ?: throw EmployerProfileException.ProfileNotFound()
 
         val updatedProfile = existingProfile.profile.copy(role = role)
         val updated = employerProfileDao.updateProfile(updatedProfile)
         if (!updated) throw EmployerProfileException.ProfileNotFound()
+        employerProfileDao.getProfile(existingProfile.profile.id)
+            ?.toProfileWithCompanyDomain()
+            ?: throw EmployerProfileException.ProfileNotFound()
     }
 
-    override suspend fun deleteProfile(userId: Long) = runCatching<Unit> {
+    override suspend fun deleteProfile(userId: Long) = runEmployerProfileCatching {
         val existingProfile = employerProfileDao.getProfileByUserId(userId)
             ?: throw EmployerProfileException.ProfileNotFound()
 
         val deleted = employerProfileDao.deleteProfile(existingProfile.profile.id)
         if (!deleted) throw EmployerProfileException.ProfileNotFound()
+    }
+
+    private suspend fun <T> runEmployerProfileCatching(block: suspend () -> T): Result<T> {
+        return runCatching { block() }.recoverCatching { error ->
+            if (error is IllegalStateException) {
+                throw EmployerProfileException.InvalidProfileData(error.message.orEmpty())
+            }
+            throw error
+        }
     }
 }

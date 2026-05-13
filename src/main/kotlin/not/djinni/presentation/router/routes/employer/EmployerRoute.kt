@@ -70,7 +70,7 @@ class EmployerRoute(
                 val userId = getUserIdFromTokenOrSendError() ?: return@put
                 val request = call.receive<UpdateEmployerProfileRequest>()
                 employerProfileRepository.updateProfile(userId, request.role)
-                    .onSuccess { call.respond("Employer profile updated successfully".toMessageResponse()) }
+                    .onSuccess { call.respond(it.toResponse()) }
                     .handleError(call = call, mapToCode = EmployerProfileException::toStatusCode)
             }
         }

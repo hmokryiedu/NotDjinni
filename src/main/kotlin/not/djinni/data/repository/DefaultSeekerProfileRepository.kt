@@ -16,36 +16,32 @@ class DefaultSeekerProfileRepository(
     private val workExperienceDao: WorkExperienceDao
 ) : SeekerProfileRepository {
 
-    override suspend fun getProfile(userId: Long) = runCatching {
+    override suspend fun getProfile(userId: Long) = runSeekerProfileCatching {
         seekerProfileDao.getProfileWithWorkExperienceByUserId(userId)?.toDomain() ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
     }
 
-    override suspend fun createProfile(userId: Long, profile: SeekerProfile) = runCatching {
+    override suspend fun createProfile(userId: Long, profile: SeekerProfile) = runSeekerProfileCatching {
         if (seekerProfileDao.profileExists(userId)) throw SeekerProfileException.ProfileAlreadyExists()
         val profileId = seekerProfileDao.createProfile(profile.toEntity(userId)).also { profileId ->
             val experiences = profile.workExperience.map { it.toEntity(profileId) }
             workExperienceDao.createWorkExperiences(experiences)
         }
-        seekerProfileDao.getProfileWithWorkExperienceByProfileId(profileId)?.toDomain() ?: run {
-            throw SeekerProfileException.ProfileNotFound()
-        }
+        getProfileByProfileId(profileId)
     }
 
-    override suspend fun updateProfile(userId: Long, profile: SeekerProfile) = runCatching<Unit> {
+    override suspend fun updateProfile(userId: Long, profile: SeekerProfile) = runSeekerProfileCatching {
         val existingProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
         val profileEntity = profile.toEntity(userId).copy(id = existingProfile.id)
         val updated = seekerProfileDao.updateProfile(profileEntity)
         if (!updated) throw SeekerProfileException.ProfileNotFound()
-        val experiences = profile.workExperience.map { it.toEntity(existingProfile.id) }
-        workExperienceDao.deleteAllWorkExperiencesByProfileId(existingProfile.id)
-        workExperienceDao.createWorkExperiences(experiences)
+        getProfileByProfileId(existingProfile.id)
     }
 
-    override suspend fun deleteProfile(userId: Long) = runCatching {
+    override suspend fun deleteProfile(userId: Long) = runSeekerProfileCatching {
         val existingProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
@@ -54,19 +50,20 @@ class DefaultSeekerProfileRepository(
         if (!deleted) throw SeekerProfileException.ProfileNotFound()
     }
 
-    override suspend fun addWorkExperience(userId: Long, experience: WorkExperience) = runCatching {
+    override suspend fun addWorkExperience(userId: Long, experience: WorkExperience) = runSeekerProfileCatching {
         val profile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
         val workExpEntity = experience.toEntity(profile.id)
         workExperienceDao.createWorkExperience(workExpEntity)
+        getProfileByProfileId(profile.id)
     }
 
     override suspend fun updateWorkExperience(
         userId: Long,
         experienceId: Long,
         experience: WorkExperience
-    ) = runCatching {
+    ) = runSeekerProfileCatching {
         val profile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
@@ -76,9 +73,10 @@ class DefaultSeekerProfileRepository(
         val experienceEntity = experience.toEntity(profile.id).copy(id = experienceId)
         val updated = workExperienceDao.updateWorkExperience(experienceEntity)
         if (!updated) throw SeekerProfileException.WorkExperienceNotFound()
+        getProfileByProfileId(profile.id)
     }
 
-    override suspend fun deleteWorkExperience(userId: Long, experienceId: Long) = runCatching {
+    override suspend fun deleteWorkExperience(userId: Long, experienceId: Long) = runSeekerProfileCatching {
         val profile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw SeekerProfileException.ProfileNotFound()
         }
@@ -87,5 +85,21 @@ class DefaultSeekerProfileRepository(
             ?: run { throw SeekerProfileException.WorkExperienceNotFound() }
         val deleted = workExperienceDao.deleteWorkExperience(experienceId)
         if (!deleted) throw SeekerProfileException.WorkExperienceNotFound()
+        getProfileByProfileId(profile.id)
+    }
+
+    private suspend fun getProfileByProfileId(profileId: Long): SeekerProfile {
+        return seekerProfileDao.getProfileWithWorkExperienceByProfileId(profileId)?.toDomain() ?: run {
+            throw SeekerProfileException.ProfileNotFound()
+        }
+    }
+
+    private suspend fun <T> runSeekerProfileCatching(block: suspend () -> T): Result<T> {
+        return runCatching { block() }.recoverCatching { error ->
+            if (error is IllegalStateException) {
+                throw SeekerProfileException.InvalidProfileData(error.message.orEmpty())
+            }
+            throw error
+        }
     }
 }

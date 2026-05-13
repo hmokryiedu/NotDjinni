@@ -16,6 +16,4 @@ data class UpdateProfileRequest(
     val aboutMe: String?,
     @SerialName("job_category")
     val jobCategory: JobCategoryRequest,
-    @SerialName("work_experience")
-    val workExperience: List<WorkExperienceRequest> = emptyList()
 )
