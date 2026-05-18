@@ -35,6 +35,8 @@ data class VacancyDetailsResponse(
     val updatedAt: String,
     @SerialName("applications_count")
     val applicationsCount: Int,
+    @SerialName("views_count")
+    val viewsCount: Int,
     @EncodeDefault
     @SerialName("is_favorite")
     val isFavorite: Boolean = false,
@@ -68,4 +70,6 @@ data class VacancyGuestDetailsResponse(
     val updatedAt: String,
     @SerialName("applications_count")
     val applicationsCount: Int,
+    @SerialName("views_count")
+    val viewsCount: Int,
 )

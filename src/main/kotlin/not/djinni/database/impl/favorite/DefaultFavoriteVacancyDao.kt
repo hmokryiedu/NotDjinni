@@ -12,6 +12,7 @@ import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.vacancy.VacancyTable
 import not.djinni.database.impl.vacancy.VacancyTableEntity
 import not.djinni.database.impl.vacancy.countApplicationsByVacancyIds
+import not.djinni.database.impl.vacancy.countViewsByVacancyIds
 import not.djinni.database.impl.vacancy.toEntity
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
@@ -68,14 +69,20 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
             .orderBy(VacancyTable.createdAt to SortOrder.DESC)
             .limit(limit, offset.toLong())
             .toList()
-        val applicationsCountByVacancyId = countApplicationsByVacancyIds(rows.map { it[VacancyTable.id].value })
+        val vacancyIds = rows.map { it[VacancyTable.id].value }
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancyIds)
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancyIds)
         rows
             .map { row ->
                 val vacancy = VacancyTableEntity.wrapRow(row)
                 val company = CompanyTableEntity.wrapRow(row)
                 val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+                val viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                    vacancy = vacancy.toEntity().copy(
+                        applicationsCount = applicationsCount,
+                        viewsCount = viewsCount,
+                    ),
                     company = CompanyEntity(
                         id = company.id.value,
                         companyName = company.companyName,
@@ -83,6 +90,7 @@ class DefaultFavoriteVacancyDao : FavoriteVacancyDao {
                         description = company.description,
                     ),
                     applicationsCount = applicationsCount,
+                    viewsCount = viewsCount,
                 )
             }
     }

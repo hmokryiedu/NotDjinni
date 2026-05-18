@@ -36,17 +36,26 @@ class DefaultVacancyDao : VacancyDao {
 
     override suspend fun getVacancy(id: Long): VacancyEntity? = runQuery {
         val applicationsCount = countApplicationsByVacancyIds(listOf(id))[id] ?: 0
-        VacancyTableEntity.findById(id)?.toEntity()?.copy(applicationsCount = applicationsCount)
+        val viewsCount = countViewsByVacancyIds(listOf(id))[id] ?: 0
+        VacancyTableEntity.findById(id)?.toEntity()?.copy(
+            applicationsCount = applicationsCount,
+            viewsCount = viewsCount,
+        )
     }
 
     override suspend fun getVacancyWithDetails(id: Long): VacancyWithDetailsEntity? = runQuery {
         val vacancyTableEntity = VacancyTableEntity.findById(id) ?: return@runQuery null
         val company = CompanyTableEntity.findById(vacancyTableEntity.companyId.value) ?: return@runQuery null
         val applicationsCount = countApplicationsByVacancyIds(listOf(id))[id] ?: 0
+        val viewsCount = countViewsByVacancyIds(listOf(id))[id] ?: 0
         VacancyWithDetailsEntity(
-            vacancy = vacancyTableEntity.toEntity().copy(applicationsCount = applicationsCount),
+            vacancy = vacancyTableEntity.toEntity().copy(
+                applicationsCount = applicationsCount,
+                viewsCount = viewsCount,
+            ),
             company = company.toEntity(),
-            applicationsCount = applicationsCount
+            applicationsCount = applicationsCount,
+            viewsCount = viewsCount,
         )
     }
 
@@ -69,9 +78,18 @@ class DefaultVacancyDao : VacancyDao {
     }
 
     override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyEntity> = runQuery {
-        filter.buildVacancyQuery()
+        val vacancies = filter.buildVacancyQuery()
             .limit(n = limit, offset = offset.toLong())
             .map { VacancyTableEntity.wrapRow(it).toEntity() }
+        val vacancyIds = vacancies.map { it.id }
+        val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancyIds)
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancyIds)
+        vacancies.map { vacancy ->
+            vacancy.copy(
+                applicationsCount = applicationsCountByVacancyId[vacancy.id] ?: 0,
+                viewsCount = viewsCountByVacancyId[vacancy.id] ?: 0,
+            )
+        }
     }
 
     override suspend fun getVacanciesWithDetails(
@@ -83,21 +101,27 @@ class DefaultVacancyDao : VacancyDao {
             .limit(n = limit, offset = offset.toLong())
             .map { VacancyTableEntity.wrapRow(it) }
         val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancies.map { it.id.value })
         vacancies
             .map { vacancy ->
                 val company = CompanyTableEntity.findById(vacancy.companyId.value) ?: run {
                     error("Company not found for vacancy id=${vacancy.id.value}")
                 }
                 val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+                val viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                    vacancy = vacancy.toEntity().copy(
+                        applicationsCount = applicationsCount,
+                        viewsCount = viewsCount,
+                    ),
                     company = CompanyEntity(
                         id = company.id.value,
                         companyName = company.companyName,
                         website = company.website,
                         description = company.description
                     ),
-                    applicationsCount = applicationsCount
+                    applicationsCount = applicationsCount,
+                    viewsCount = viewsCount,
                 )
             }
     }
@@ -117,14 +141,20 @@ class DefaultVacancyDao : VacancyDao {
             .toList()
         val vacancies = rows.map { VacancyTableEntity.wrapRow(it) }
         val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancies.map { it.id.value })
         rows.map { row ->
             val vacancy = VacancyTableEntity.wrapRow(row)
             val company = CompanyTableEntity.wrapRow(row)
             val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+            val viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0
             VacancyWithDetailsEntity(
-                vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                vacancy = vacancy.toEntity().copy(
+                    applicationsCount = applicationsCount,
+                    viewsCount = viewsCount,
+                ),
                 company = company.toEntity(),
                 applicationsCount = applicationsCount,
+                viewsCount = viewsCount,
             )
         }
     }
@@ -144,13 +174,19 @@ class DefaultVacancyDao : VacancyDao {
             .limit(limit, offset.toLong())
             .toList()
         val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancies.map { it.id.value })
         vacancies
             .map { vacancy ->
                 val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+                val viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0
                 VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                    vacancy = vacancy.toEntity().copy(
+                        applicationsCount = applicationsCount,
+                        viewsCount = viewsCount,
+                    ),
                     company = company,
-                    applicationsCount = applicationsCount
+                    applicationsCount = applicationsCount,
+                    viewsCount = viewsCount,
                 )
             }
     }
@@ -161,8 +197,12 @@ class DefaultVacancyDao : VacancyDao {
             .limit(limit)
             .toList()
         val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancies.map { it.id.value })
+        val viewsCountByVacancyId = countViewsByVacancyIds(vacancies.map { it.id.value })
         vacancies.map { vacancy ->
-            vacancy.toEntity().copy(applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0)
+            vacancy.toEntity().copy(
+                applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0,
+                viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0,
+            )
         }
     }
 

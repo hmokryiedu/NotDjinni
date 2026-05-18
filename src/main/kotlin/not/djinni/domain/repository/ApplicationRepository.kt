@@ -13,6 +13,7 @@ interface ApplicationRepository {
     suspend fun withdrawApplication(userId: Long, id: Long): Result<Unit>
     suspend fun updateApplicationStatus(userId: Long, id: Long, statusCode: ApplicationStatusCode): Result<Unit>
     suspend fun getMyApplications(userId: Long, filter: ApplicationFilter, limit: Int = 20, offset: Int = 0): Result<List<ApplicationWithDetails>>
+    suspend fun getMyApplicationByVacancy(userId: Long, vacancyId: Long): Result<ApplicationWithDetails>
     suspend fun getVacancyApplications(userId: Long, vacancyId: Long, limit: Int = 20, offset: Int = 0): Result<List<ApplicationWithDetails>>
     suspend fun hasApplied(userId: Long, vacancyId: Long): Result<Boolean>
 }

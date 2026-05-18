@@ -132,6 +132,19 @@ class DefaultFavoriteVacancyRepositoryTest {
     }
 
     @Test
+    fun `getFavoriteVacancies keeps views count`() {
+        runBlocking {
+            val favoriteDao = FakeFavoriteVacancyDao(favoriteVacancies = listOf(vacancyWithDetails(viewsCount = 21)))
+            val repository = repository(favoriteDao = favoriteDao)
+
+            val result = repository.getFavoriteVacancies(userId = USER_ID, limit = 20, offset = 0)
+
+            assertTrue(result.isSuccess)
+            assertEquals(21, result.getOrThrow().single().viewsCount)
+        }
+    }
+
+    @Test
     fun `getFavoriteVacancies returns SeekerProfileNotFound when seeker profile is missing`() {
         runBlocking {
             val repository = repository(seekerProfileDao = FakeSeekerProfileDao(profile = null))
@@ -180,6 +193,7 @@ class DefaultFavoriteVacancyRepositoryTest {
     private class FakeFavoriteVacancyDao(
         private val favoriteExists: Boolean = false,
         private val favoriteIds: Set<Long> = emptySet(),
+        private val favoriteVacancies: List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails()),
     ) : FavoriteVacancyDao {
         val created = mutableListOf<FavoriteVacancyEntity>()
         val removed = mutableListOf<Pair<Long, Long>>()
@@ -196,7 +210,7 @@ class DefaultFavoriteVacancyRepositoryTest {
         }
 
         override suspend fun getFavoriteVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> {
-            return listOf(vacancyWithDetails())
+            return favoriteVacancies
         }
 
         override suspend fun favoriteExists(vacancyId: Long, jobSeekerId: Long): Boolean = favoriteExists || created.any {
@@ -256,7 +270,10 @@ class DefaultFavoriteVacancyRepositoryTest {
             jobCategory = JobCategoryCode.SOFTWARE_DEV,
         )
 
-        fun vacancyEntity(status: VacancyStatusCode = VacancyStatusCode.ACTIVE) = VacancyEntity(
+        fun vacancyEntity(
+            status: VacancyStatusCode = VacancyStatusCode.ACTIVE,
+            viewsCount: Int = 0,
+        ) = VacancyEntity(
             id = VACANCY_ID,
             companyId = 17L,
             title = "Kotlin Backend Developer",
@@ -269,16 +286,18 @@ class DefaultFavoriteVacancyRepositoryTest {
             status = status,
             createdAt = NOW,
             updatedAt = NOW,
+            viewsCount = viewsCount,
         )
 
-        fun vacancyWithDetails() = VacancyWithDetailsEntity(
-            vacancy = vacancyEntity(),
+        fun vacancyWithDetails(viewsCount: Int = 0) = VacancyWithDetailsEntity(
+            vacancy = vacancyEntity(viewsCount = viewsCount),
             company = CompanyEntity(
                 id = 17L,
                 companyName = "Not Djinni",
                 website = null,
                 description = "Hiring platform",
-            )
+            ),
+            viewsCount = viewsCount,
         )
     }
 }

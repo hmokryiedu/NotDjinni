@@ -73,6 +73,7 @@ fun Vacancy.toResponse() = VacancyResponse(
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
     isFavorite = isFavorite,
 )
 
@@ -90,6 +91,7 @@ fun Vacancy.toGuestResponse() = VacancyGuestResponse(
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
 )
 
 fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
@@ -106,6 +108,7 @@ fun VacancyWithDetails.toResponse() = VacancyDetailsResponse(
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
     isFavorite = isFavorite,
 )
 
@@ -123,6 +126,7 @@ fun VacancyWithDetails.toGuestResponse() = VacancyGuestDetailsResponse(
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
 )
 
 fun List<Vacancy>.toResponseList() = VacancyListResponse(

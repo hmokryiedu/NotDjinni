@@ -30,6 +30,37 @@ import kotlin.test.assertTrue
 class DefaultApplicationRepositoryTest {
 
     @Test
+    fun `getMyApplicationByVacancy returns current seeker application for vacancy`() = runBlocking {
+        val applicationDao = FakeApplicationDao()
+        val repository = repository(applicationDao = applicationDao)
+
+        val result = repository.getMyApplicationByVacancy(userId = USER_ID, vacancyId = VACANCY_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(APPLICATION_ID, result.getOrThrow().id)
+        assertEquals(VACANCY_ID, applicationDao.applicationQueries.single().vacancyId)
+        assertEquals(SEEKER_ID, applicationDao.applicationQueries.single().jobSeekerId)
+    }
+
+    @Test
+    fun `getMyApplicationByVacancy returns seeker profile not found when current user has no seeker profile`() = runBlocking {
+        val repository = repository(seekerProfileDao = FakeSeekerProfileDao(profile = null))
+
+        val result = repository.getMyApplicationByVacancy(userId = USER_ID, vacancyId = VACANCY_ID)
+
+        assertIs<ApplicationException.SeekerProfileNotFound>(result.exceptionOrNull())
+    }
+
+    @Test
+    fun `getMyApplicationByVacancy returns application not found when current seeker has no application for vacancy`() = runBlocking {
+        val repository = repository(applicationDao = FakeApplicationDao(applications = emptyList()))
+
+        val result = repository.getMyApplicationByVacancy(userId = USER_ID, vacancyId = VACANCY_ID)
+
+        assertIs<ApplicationException.ApplicationNotFound>(result.exceptionOrNull())
+    }
+
+    @Test
     fun `withdrawApplication updates active statuses to withdrawn`() = runBlocking {
         listOf(
             ApplicationStatusCode.APPLIED,
@@ -121,8 +152,10 @@ class DefaultApplicationRepositoryTest {
             status = status,
             jobSeekerId = jobSeekerId,
         ),
+        private val applications: List<ApplicationWithDetailsEntity> = listOf(applicationWithDetails()),
     ) : ApplicationDao {
         val statusUpdates = mutableListOf<Pair<Long, ApplicationStatusCode>>()
+        val applicationQueries = mutableListOf<ApplicationFilter>()
 
         override suspend fun createApplication(application: ApplicationEntity): Long = application.id
         override suspend fun getApplication(id: Long): ApplicationWithDetailsEntity? = application
@@ -134,7 +167,15 @@ class DefaultApplicationRepositoryTest {
         }
 
         override suspend fun deleteApplication(id: Long): Boolean = true
-        override suspend fun getApplications(filter: ApplicationFilter, limit: Int, offset: Int): List<ApplicationWithDetailsEntity> = emptyList()
+        override suspend fun getApplications(
+            filter: ApplicationFilter,
+            limit: Int,
+            offset: Int
+        ): List<ApplicationWithDetailsEntity> {
+            applicationQueries += filter
+            return applications
+        }
+
         override suspend fun countApplications(filter: ApplicationFilter): Int = 0
         override suspend fun hasApplied(vacancyId: Long, jobSeekerId: Long): Boolean = false
     }
@@ -160,6 +201,7 @@ class DefaultApplicationRepositoryTest {
         override suspend fun deleteVacancy(id: Long): Boolean = true
         override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyEntity> = emptyList()
         override suspend fun getVacanciesWithDetails(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
+        override suspend fun getAppliedVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
         override suspend fun countVacancies(filter: VacancyFilter): Int = 0
         override suspend fun getVacanciesByCompany(companyId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
         override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = emptyList()

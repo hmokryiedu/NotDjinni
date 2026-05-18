@@ -37,6 +37,7 @@ class ApplicationRoute(
         createApplication()
         getMyApplications()
         getApplicationById()
+        getMyApplicationByVacancy()
         updateApplication()
         deleteApplication()
         withdrawApplication()
@@ -83,6 +84,17 @@ class ApplicationRoute(
             get<Application.ById> { resource ->
                 val userId = getUserIdFromTokenOrSendError() ?: return@get
                 applicationRepository.getApplication(userId = userId, id = resource.id)
+                    .onSuccess { call.respond(it.toResponse()) }
+                    .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
+            }
+        }
+    }
+
+    private fun Routing.getMyApplicationByVacancy() {
+        authenticate(JwtAuth.NAME) {
+            get<Application.MyByVacancy> { resource ->
+                val userId = getUserIdFromTokenOrSendError() ?: return@get
+                applicationRepository.getMyApplicationByVacancy(userId = userId, vacancyId = resource.vacancyId)
                     .onSuccess { call.respond(it.toResponse()) }
                     .handleError(call = call, mapToCode = ApplicationException::toStatusCode)
             }

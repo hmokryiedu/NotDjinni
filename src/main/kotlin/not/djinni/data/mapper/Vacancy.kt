@@ -21,6 +21,7 @@ fun VacancyEntity.toDomain() = Vacancy(
     createdAt = createdAt,
     updatedAt = updatedAt,
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
     isFavorite = isFavorite,
 )
 
@@ -37,7 +38,8 @@ fun Vacancy.toEntity() = VacancyEntity(
     status = status,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    applicationsCount = applicationsCount
+    applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
 )
 
 fun VacancyWithDetailsEntity.toDomain() = VacancyWithDetails(
@@ -53,6 +55,7 @@ fun VacancyWithDetailsEntity.toDomain() = VacancyWithDetails(
     createdAt = vacancy.createdAt,
     updatedAt = vacancy.updatedAt,
     applicationsCount = applicationsCount,
+    viewsCount = viewsCount,
     isFavorite = vacancy.isFavorite,
 )
 

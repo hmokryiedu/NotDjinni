@@ -145,6 +145,20 @@ class DefaultApplicationRepository(
         ).map { it.toDomain() }
     }
 
+    override suspend fun getMyApplicationByVacancy(
+        userId: Long,
+        vacancyId: Long
+    ) = runCatching {
+        val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
+            throw ApplicationException.SeekerProfileNotFound()
+        }
+        val filter = ApplicationFilter(vacancyId = vacancyId, jobSeekerId = seekerProfile.id)
+        applicationDao.getApplications(filter = filter, limit = 1, offset = 0)
+            .firstOrNull()
+            ?.toDomain()
+            ?: throw ApplicationException.ApplicationNotFound()
+    }
+
     override suspend fun getVacancyApplications(
         userId: Long,
         vacancyId: Long,

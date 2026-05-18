@@ -10,6 +10,9 @@ class Application {
     @Resource("vacancy/{vacancyId}")
     data class ByVacancy(val parent: Application = Application(), val vacancyId: Long)
 
+    @Resource("vacancy/{vacancyId}/mine")
+    data class MyByVacancy(val parent: Application = Application(), val vacancyId: Long)
+
     @Resource("{id}/status")
     data class Status(val parent: Application = Application(), val id: Long)
 

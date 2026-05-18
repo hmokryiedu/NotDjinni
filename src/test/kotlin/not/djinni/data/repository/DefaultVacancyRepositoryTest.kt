@@ -155,6 +155,36 @@ class DefaultVacancyRepositoryTest {
     }
 
     @Test
+    fun `public vacancy detail keeps views count`() = runBlocking {
+        val repository = repository(FakeVacancyDao(viewsCount = 6))
+
+        val result = repository.getPublicVacancyWithDetails(VACANCY_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(6, result.getOrThrow().viewsCount)
+    }
+
+    @Test
+    fun `public vacancy list keeps views count`() = runBlocking {
+        val repository = repository(FakeVacancyDao(viewsCount = 8))
+
+        val result = repository.getPublicVacancies(VacancyFilter(), limit = 20, offset = 0)
+
+        assertTrue(result.isSuccess)
+        assertEquals(8, result.getOrThrow().single().viewsCount)
+    }
+
+    @Test
+    fun `recommended vacancy source keeps views count`() = runBlocking {
+        val repository = repository(FakeVacancyDao(viewsCount = 10))
+
+        val result = repository.getVacancies(VacancyFilter(), limit = 20, offset = 0)
+
+        assertTrue(result.isSuccess)
+        assertEquals(10, result.getOrThrow().single().viewsCount)
+    }
+
+    @Test
     fun `getPublicVacanciesForSeeker marks favorite state in bulk`() = runBlocking {
         val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
         val repository = repository(FakeVacancyDao(), favoriteDao = favoriteDao)
@@ -208,8 +238,8 @@ class DefaultVacancyRepositoryTest {
     fun `getAppliedVacancies preserves DAO order and marks favorites in bulk`() = runBlocking {
         val vacancyDao = FakeVacancyDao(
             appliedVacancies = listOf(
-                vacancyWithDetails(vacancyId = 31L),
-                vacancyWithDetails(vacancyId = 29L),
+                vacancyWithDetails(vacancyId = 31L, viewsCount = 12),
+                vacancyWithDetails(vacancyId = 29L, viewsCount = 14),
             )
         )
         val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(29L))
@@ -220,7 +250,24 @@ class DefaultVacancyRepositoryTest {
         assertTrue(result.isSuccess)
         assertEquals(listOf(31L, 29L), result.getOrThrow().map { it.id })
         assertEquals(listOf(false, true), result.getOrThrow().map { it.isFavorite })
+        assertEquals(listOf(12, 14), result.getOrThrow().map { it.viewsCount })
         assertEquals(SEEKER_ID to setOf(31L, 29L), favoriteDao.lastFavoriteIdsRequest)
+    }
+
+    @Test
+    fun `company employer and recent vacancy paths keep views count`() = runBlocking {
+        val repository = repository(FakeVacancyDao(viewsCount = 16))
+
+        val employerResult = repository.getEmployerVacancies(USER_ID, limit = 20, offset = 0)
+        val companyResult = repository.getCompanyVacancies(COMPANY_ID, limit = 20, offset = 0)
+        val recentResult = repository.getRecentVacancies(limit = 10)
+
+        assertTrue(employerResult.isSuccess)
+        assertTrue(companyResult.isSuccess)
+        assertTrue(recentResult.isSuccess)
+        assertEquals(16, employerResult.getOrThrow().single().viewsCount)
+        assertEquals(16, companyResult.getOrThrow().single().viewsCount)
+        assertEquals(16, recentResult.getOrThrow().single().viewsCount)
     }
 
     @Test
@@ -281,6 +328,7 @@ class DefaultVacancyRepositoryTest {
     private class FakeVacancyDao(
         private val detailStatus: VacancyStatusCode = VacancyStatusCode.ACTIVE,
         private val applicationsCount: Int = 0,
+        private val viewsCount: Int = 0,
         private val appliedVacancies: List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails()),
     ) : VacancyDao {
         var lastDetailsFilter: VacancyFilter? = null
@@ -302,6 +350,7 @@ class DefaultVacancyRepositoryTest {
         override suspend fun getVacancyWithDetails(id: Long): VacancyWithDetailsEntity? = vacancyWithDetails(
             status = detailStatus,
             applicationsCount = applicationsCount,
+            viewsCount = viewsCount,
         )
 
         override suspend fun updateVacancy(vacancy: VacancyEntity): Boolean = true
@@ -318,7 +367,7 @@ class DefaultVacancyRepositoryTest {
             lastDetailsFilter = filter
             lastDetailsLimit = limit
             lastDetailsOffset = offset
-            return listOf(vacancyWithDetails())
+            return listOf(vacancyWithDetails(viewsCount = viewsCount))
         }
 
         override suspend fun getAppliedVacancies(
@@ -334,10 +383,10 @@ class DefaultVacancyRepositoryTest {
 
         override suspend fun countVacancies(filter: VacancyFilter): Int = 1
         override suspend fun getVacanciesByCompany(companyId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> {
-            return listOf(vacancyWithDetails())
+            return listOf(vacancyWithDetails(viewsCount = viewsCount))
         }
 
-        override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = listOf(vacancyEntity())
+        override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = listOf(vacancyEntity(viewsCount = viewsCount))
         override suspend fun updateVacancyStatus(id: Long, status: VacancyStatusCode): Boolean = true
         override suspend fun vacancyExists(id: Long): Boolean = true
     }
@@ -362,6 +411,7 @@ class DefaultVacancyRepositoryTest {
             vacancyId: Long = VACANCY_ID,
             status: VacancyStatusCode = VacancyStatusCode.ACTIVE,
             applicationsCount: Int = 0,
+            viewsCount: Int = 0,
         ) = VacancyEntity(
             id = vacancyId,
             companyId = COMPANY_ID,
@@ -376,14 +426,21 @@ class DefaultVacancyRepositoryTest {
             createdAt = NOW,
             updatedAt = NOW,
             applicationsCount = applicationsCount,
+            viewsCount = viewsCount,
         )
 
         fun vacancyWithDetails(
             vacancyId: Long = VACANCY_ID,
             status: VacancyStatusCode = VacancyStatusCode.ACTIVE,
             applicationsCount: Int = 0,
+            viewsCount: Int = 0,
         ) = VacancyWithDetailsEntity(
-            vacancy = vacancyEntity(vacancyId = vacancyId, status = status, applicationsCount = applicationsCount),
+            vacancy = vacancyEntity(
+                vacancyId = vacancyId,
+                status = status,
+                applicationsCount = applicationsCount,
+                viewsCount = viewsCount,
+            ),
             company = CompanyEntity(
                 id = COMPANY_ID,
                 companyName = "Not Djinni",
@@ -391,6 +448,7 @@ class DefaultVacancyRepositoryTest {
                 description = "Hiring platform",
             ),
             applicationsCount = applicationsCount,
+            viewsCount = viewsCount,
         )
 
         fun employerProfile() = EmployerProfileWithCompany(

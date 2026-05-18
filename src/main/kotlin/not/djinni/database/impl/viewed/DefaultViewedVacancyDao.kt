@@ -12,6 +12,7 @@ import not.djinni.database.impl.seeker.SeekerProfileTable
 import not.djinni.database.impl.vacancy.VacancyTable
 import not.djinni.database.impl.vacancy.VacancyTableEntity
 import not.djinni.database.impl.vacancy.countApplicationsByVacancyIds
+import not.djinni.database.impl.vacancy.countViewsByVacancyIds as countViewsByVacancyIdsForVacancies
 import not.djinni.database.impl.vacancy.toEntity
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
@@ -20,7 +21,6 @@ import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.selectAll
 import org.koin.core.annotation.Single
 
@@ -54,16 +54,20 @@ class DefaultViewedVacancyDao : ViewedVacancyDao {
             .toList()
         val vacancyIds = rows.map { it[VacancyTable.id].value }.toSet()
         val applicationsCountByVacancyId = countApplicationsByVacancyIds(vacancyIds.toList())
-        val viewsCountByVacancyId = countViewsByVacancyIdsInCurrentTransaction(vacancyIds)
+        val viewsCountByVacancyId = countViewsByVacancyIdsForVacancies(vacancyIds)
         rows.map { row ->
             val vacancy = VacancyTableEntity.wrapRow(row)
             val company = CompanyTableEntity.wrapRow(row)
             val applicationsCount = applicationsCountByVacancyId[vacancy.id.value] ?: 0
+            val viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0
             ViewedVacancyWithDetailsEntity(
                 viewedAt = row[ViewedVacancyTable.viewedAt],
-                viewsCount = viewsCountByVacancyId[vacancy.id.value] ?: 0,
+                viewsCount = viewsCount,
                 vacancy = VacancyWithDetailsEntity(
-                    vacancy = vacancy.toEntity().copy(applicationsCount = applicationsCount),
+                    vacancy = vacancy.toEntity().copy(
+                        applicationsCount = applicationsCount,
+                        viewsCount = viewsCount,
+                    ),
                     company = CompanyEntity(
                         id = company.id.value,
                         companyName = company.companyName,
@@ -71,23 +75,14 @@ class DefaultViewedVacancyDao : ViewedVacancyDao {
                         description = company.description,
                     ),
                     applicationsCount = applicationsCount,
+                    viewsCount = viewsCount,
                 ),
             )
         }
     }
 
     override suspend fun countViewsByVacancyIds(vacancyIds: Set<Long>): Map<Long, Int> = runQuery {
-        countViewsByVacancyIdsInCurrentTransaction(vacancyIds)
-    }
-
-    private fun countViewsByVacancyIdsInCurrentTransaction(vacancyIds: Set<Long>): Map<Long, Int> {
-        if (vacancyIds.isEmpty()) return emptyMap()
-        val countExpression = ViewedVacancyTable.id.count()
-        return ViewedVacancyTable
-            .select(ViewedVacancyTable.vacancyId, countExpression)
-            .where { ViewedVacancyTable.vacancyId inList vacancyIds.map { EntityID(it, VacancyTable) } }
-            .groupBy(ViewedVacancyTable.vacancyId)
-            .associate { row -> row[ViewedVacancyTable.vacancyId].value to row[countExpression].toInt() }
+        countViewsByVacancyIdsForVacancies(vacancyIds)
     }
 
     private fun upsertViewedVacancy(viewedVacancy: ViewedVacancyEntity) {

@@ -21,12 +21,34 @@ import not.djinni.model.role.Company
 class VacancyMapperTest {
 
     @Test
-    fun `maps applications count to vacancy details response`() {
-        val vacancy = vacancy(applicationsCount = 7)
+    fun `maps counts to vacancy details response`() {
+        val vacancy = vacancy(applicationsCount = 7, viewsCount = 11)
 
         val response = vacancy.toResponse()
 
         assertEquals(7, response.applicationsCount)
+        assertEquals(11, response.viewsCount)
+    }
+
+    @Test
+    fun `maps views count to guest vacancy details response`() {
+        val response = vacancy(viewsCount = 13).toGuestResponse()
+
+        assertEquals(13, response.viewsCount)
+    }
+
+    @Test
+    fun `maps views count to authenticated vacancy list response`() {
+        val response = listOf(vacancy(viewsCount = 17)).toResponseList()
+
+        assertEquals(17, response.vacancies.single().viewsCount)
+    }
+
+    @Test
+    fun `maps views count to guest vacancy list response`() {
+        val response = listOf(vacancy(viewsCount = 19)).toGuestResponseList()
+
+        assertEquals(19, response.vacancies.single().viewsCount)
     }
 
     @Test
@@ -53,13 +75,14 @@ class VacancyMapperTest {
             ViewedVacancyWithDetails(
                 viewedAt = Instant.parse("2026-05-13T12:00:00Z"),
                 viewsCount = 3,
-                vacancy = vacancy(applicationsCount = 5),
+                vacancy = vacancy(applicationsCount = 5, viewsCount = 7),
             )
         ).toViewedResponseList()
 
         assertEquals("2026-05-13T12:00:00Z", response.viewedVacancies.single().viewedAt)
         assertEquals(3, response.viewedVacancies.single().viewsCount)
         assertEquals(5, response.viewedVacancies.single().vacancy.applicationsCount)
+        assertEquals(7, response.viewedVacancies.single().vacancy.viewsCount)
     }
 
     @Test
@@ -73,6 +96,7 @@ class VacancyMapperTest {
 
     private fun vacancy(
         applicationsCount: Int = 0,
+        viewsCount: Int = 0,
         isFavorite: Boolean = false,
     ) = VacancyWithDetails(
         id = 1,
@@ -90,6 +114,7 @@ class VacancyMapperTest {
         category = JobCategoryCode.SOFTWARE_DEV,
         status = VacancyStatusCode.ACTIVE,
         applicationsCount = applicationsCount,
+        viewsCount = viewsCount,
         isFavorite = isFavorite,
         createdAt = Instant.parse("2026-05-04T00:00:00Z"),
         updatedAt = Instant.parse("2026-05-04T00:00:00Z")
