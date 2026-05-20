@@ -4,15 +4,3 @@ approval_policy = "never"
 
 [sandbox_workspace_write]
 network_access = true
-
-[agents.backend_architect]
-description = "Ktor backend architecture research agent for NotDjinni."
-config_file = "agents/backend_architect.toml"
-
-[agents.backend_implementor]
-description = "Ktor backend implementation agent for NotDjinni."
-config_file = "agents/backend_implementor.toml"
-
-[agents.backend_tester]
-description = "Backend manual QA and validation phase agent for NotDjinni API."
-config_file = "agents/backend_tester.toml"
