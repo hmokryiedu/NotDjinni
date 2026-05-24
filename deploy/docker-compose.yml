@@ -24,7 +24,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./keys:/run/keys:ro
+      - ./secrets/jwt:/secrets/jwt:ro
 
   postgres:
     image: postgres:16-alpine
