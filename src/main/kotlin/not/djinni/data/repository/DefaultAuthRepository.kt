@@ -12,7 +12,8 @@ import not.djinni.domain.repository.AuthRepository
 import not.djinni.model.token.AuthTokens
 import org.koin.core.annotation.Single
 import java.security.MessageDigest
-import java.util.*
+import java.security.SecureRandom
+import java.util.Base64
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -40,7 +41,7 @@ class DefaultAuthRepository(
 
     override suspend fun generateTokens(userId: Long): Result<AuthTokens> = runCatching {
         val accessToken = tokenProvider.generate(userId)
-        val refreshToken = tokenProvider.generate(userId)
+        val refreshToken = generateRefreshToken()
         val duration = REFRESH_TOKEN_VALIDITY_DAYS.toDuration(DurationUnit.DAYS)
         val expiresAt = Clock.System.now().plus(duration)
         val entity = RefreshTokenEntity(
@@ -81,10 +82,18 @@ class DefaultAuthRepository(
 
     private fun String.hash(): String = MessageDigest.getInstance("SHA-256").digest(this.toByteArray()).toHexString()
 
+    private fun generateRefreshToken(): String {
+        val bytes = ByteArray(REFRESH_TOKEN_RANDOM_BYTES)
+        secureRandom.nextBytes(bytes)
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+    }
+
     private companion object {
         const val PASSWORD_REGEX = """^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,60}$"""
         const val MIN_NAME_LENGTH = 2
         const val MAX_NAME_LENGTH = 100
         const val REFRESH_TOKEN_VALIDITY_DAYS = 30L
+        const val REFRESH_TOKEN_RANDOM_BYTES = 48
+        val secureRandom = SecureRandom()
     }
 }

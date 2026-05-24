@@ -16,6 +16,8 @@ import not.djinni.domain.repository.VacancyRepository
 import not.djinni.domain.repository.ViewedVacancyRepository
 import not.djinni.presentation.router.common.response.common.toMessageResponse
 import not.djinni.presentation.router.extension.handleError
+import not.djinni.presentation.router.routes.application.mapper.toDomain
+import not.djinni.presentation.router.routes.application.request.ApplicationStatusRequest
 import not.djinni.presentation.router.routes.Route
 import not.djinni.presentation.router.routes.common.auth.JwtAuth
 import not.djinni.presentation.router.routes.common.extension.getClaim
@@ -117,7 +119,16 @@ class VacancyRoute(
                 val queryParams = call.request.queryParameters
                 val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
                 val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-                vacancyRepository.getAppliedVacancies(userId = userId, limit = limit, offset = offset)
+                val applicationStatuses = queryParams.getAllFilters(
+                    key = "application_status",
+                    mapper = { ApplicationStatusRequest.valueOf(it).toDomain() }
+                )
+                vacancyRepository.getAppliedVacancies(
+                    userId = userId,
+                    limit = limit,
+                    offset = offset,
+                    applicationStatuses = applicationStatuses,
+                )
                     .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
                     .handleError(call = call, mapToCode = VacancyException::toStatusCode)
             }

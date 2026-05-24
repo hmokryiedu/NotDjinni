@@ -201,7 +201,12 @@ class DefaultApplicationRepositoryTest {
         override suspend fun deleteVacancy(id: Long): Boolean = true
         override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyEntity> = emptyList()
         override suspend fun getVacanciesWithDetails(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
-        override suspend fun getAppliedVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
+        override suspend fun getAppliedVacancies(
+            jobSeekerId: Long,
+            limit: Int,
+            offset: Int,
+            applicationStatuses: List<ApplicationStatusCode>,
+        ): List<VacancyWithDetailsEntity> = emptyList()
         override suspend fun countVacancies(filter: VacancyFilter): Int = 0
         override suspend fun getVacanciesByCompany(companyId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
         override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = emptyList()

@@ -1,0 +1,11 @@
+.git
+.gradle
+.idea
+build
+out
+.kotlin
+*.iml
+ai/
+deploy/.env
+deploy/keys
+keys

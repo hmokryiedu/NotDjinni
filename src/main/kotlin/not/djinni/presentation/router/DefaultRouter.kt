@@ -9,6 +9,7 @@ import not.djinni.presentation.router.routes.user.UserRoute
 import not.djinni.presentation.router.routes.company.CompanyRoute
 import not.djinni.presentation.router.routes.employer.EmployerRoute
 import not.djinni.presentation.router.routes.favorite.FavoriteVacancyRoute
+import not.djinni.presentation.router.routes.health.HealthRoute
 import not.djinni.presentation.router.routes.token.TokenRoute
 import not.djinni.presentation.router.routes.template.TemplateRoute
 import not.djinni.presentation.router.routes.vacancy.VacancyRoute
@@ -26,6 +27,7 @@ class DefaultRouter(
     private val applicationRoute: ApplicationRoute,
     private val favoriteVacancyRoute: FavoriteVacancyRoute,
     private val templateRoute: TemplateRoute,
+    private val healthRoute: HealthRoute,
 ) : Router {
 
     override fun install(application: Application) {
@@ -40,6 +42,7 @@ class DefaultRouter(
             favoriteVacancyRoute.install(this)
             templateRoute.install(this)
             tokenRoute.install(this)
+            healthRoute.install(this)
         }
     }
 }

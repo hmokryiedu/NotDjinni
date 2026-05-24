@@ -12,6 +12,7 @@ import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.database.api.vacancy.VacancySortField
 import not.djinni.domain.exception.vacancy.VacancyException
 import not.djinni.domain.repository.VacancyRepository
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.Vacancy
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.koin.core.annotation.Single
@@ -103,7 +104,12 @@ class DefaultVacancyRepository(
         }
     }
 
-    override suspend fun getAppliedVacancies(userId: Long, limit: Int, offset: Int) = runCatching {
+    override suspend fun getAppliedVacancies(
+        userId: Long,
+        limit: Int,
+        offset: Int,
+        applicationStatuses: List<ApplicationStatusCode>,
+    ) = runCatching {
         val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: run {
             throw VacancyException.Unauthorized("No seeker profile found")
         }
@@ -111,6 +117,7 @@ class DefaultVacancyRepository(
             jobSeekerId = seekerProfile.id,
             limit = limit,
             offset = offset,
+            applicationStatuses = applicationStatuses,
         )
         val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
             jobSeekerId = seekerProfile.id,

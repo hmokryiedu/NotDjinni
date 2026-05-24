@@ -17,12 +17,10 @@
 
 ### 1. Planning
 
-- Research the codebase first.
-- Identify how the task should be implemented, likely obstacles, and how to solve them.
+- Research the codebase first. Identify how the task should be implemented, likely obstacles, and how to solve them.
 - If there is uncertainty or low confidence, ask the user before continuing.
 - Planning result must be a concise plan with all required technical and product details.
-- Ask the user to validate the plan.
-- If the user rejects it, continue planning until the user explicitly approves.
+- Ask the user to validate the plan. If the user rejects it, continue planning until the user explicitly approves.
 
 ### 2. Implementation
 
@@ -40,6 +38,7 @@
 - Allowed validation tools only:
   - Unit testing.
   - Manual endpoint QA against the running backend as an external HTTP client.
+- Other validation tools are forbidden.
 - Validation phase must run the backend on a free port.
 - Before starting the backend, find an actually free local port.
 - Run manual endpoint QA against that free port only.
@@ -60,6 +59,23 @@
   - What was done.
   - What files changed.
   - How to test.
+
+## Orchestration
+
+- Main agent is the only orchestrator.
+- Main agent must not directly perform work described in Task Phases.
+- Use separate default subagents for each phase. Ignore user-created agents for this workflow.
+- Reuse an active Planning subagent while the workflow remains in the same Planning phase.
+- If the Planning subagent asks questions, relay the user's answers back to that same Planning subagent.
+- Start a new Planning subagent only if the workflow moved to another phase after that Planning subagent, then later returns to Planning.
+- Required phase model config:
+  - Planning: model `gpt-5.5`, reasoning `high`.
+  - Implementation: model `gpt-5.3-codex`, reasoning `medium`.
+  - Validation: model `gpt-5.5`, reasoning `medium`.
+  - Report: model `gpt-5.4`, reasoning `low`.
+- Each subagent must receive:
+  - Full initial task up to the `## Task Phases` section.
+  - Only instructions required for that specific phase, such as planning, implementation, validation, or report instructions.
 
 ## Backend Guardrails
 

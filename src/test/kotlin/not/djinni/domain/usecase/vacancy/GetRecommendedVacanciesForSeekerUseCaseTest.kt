@@ -5,6 +5,7 @@ import kotlinx.datetime.Instant
 import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.domain.repository.SeekerProfileRepository
 import not.djinni.domain.repository.VacancyRepository
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.role.SeekerProfile
 import not.djinni.model.role.WorkExperience
 import not.djinni.model.vacancy.EmploymentTypeCode
@@ -53,7 +54,12 @@ class GetRecommendedVacanciesForSeekerUseCaseTest {
         override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = Result.success(vacancies)
         override suspend fun getPublicVacancies(filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun getPublicVacanciesForSeeker(userId: Long, filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
-        override suspend fun getAppliedVacancies(userId: Long, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
+        override suspend fun getAppliedVacancies(
+            userId: Long,
+            limit: Int,
+            offset: Int,
+            applicationStatuses: List<ApplicationStatusCode>,
+        ): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun getPublicVacancyWithDetails(id: Long): Result<VacancyWithDetails> = error("Not needed")
         override suspend fun getPublicVacancyWithDetailsForSeeker(userId: Long, id: Long): Result<VacancyWithDetails> = error("Not needed")
         override suspend fun getPublicRecentVacancies(limit: Int): Result<List<VacancyWithDetails>> = error("Not needed")

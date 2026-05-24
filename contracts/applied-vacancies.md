@@ -50,7 +50,8 @@ request ->
 {
   "query": {
     "limit": "Int?",
-    "offset": "Int?"
+    "offset": "Int?",
+    "application_status": "ApplicationStatus[]?"
   }
 }
 ```

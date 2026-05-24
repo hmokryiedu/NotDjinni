@@ -18,6 +18,7 @@ import not.djinni.database.api.vacancy.VacancyFilter
 import not.djinni.database.api.vacancy.VacancySortField
 import not.djinni.database.api.vacancy.VacancyWithDetailsEntity
 import not.djinni.domain.exception.vacancy.VacancyException
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.EmploymentTypeCode
 import not.djinni.model.vacancy.JobCategoryCode
 import not.djinni.model.vacancy.VacancyStatusCode
@@ -221,6 +222,7 @@ class DefaultVacancyRepositoryTest {
         assertEquals(SEEKER_ID, vacancyDao.lastAppliedJobSeekerId)
         assertEquals(5, vacancyDao.lastAppliedLimit)
         assertEquals(10, vacancyDao.lastAppliedOffset)
+        assertEquals(emptyList(), vacancyDao.lastAppliedApplicationStatuses)
     }
 
     @Test
@@ -252,6 +254,26 @@ class DefaultVacancyRepositoryTest {
         assertEquals(listOf(false, true), result.getOrThrow().map { it.isFavorite })
         assertEquals(listOf(12, 14), result.getOrThrow().map { it.viewsCount })
         assertEquals(SEEKER_ID to setOf(31L, 29L), favoriteDao.lastFavoriteIdsRequest)
+    }
+
+    @Test
+    fun `getAppliedVacancies passes application statuses to DAO with limit and offset`() = runBlocking {
+        val vacancyDao = FakeVacancyDao()
+        val repository = repository(vacancyDao)
+        val statuses = listOf(ApplicationStatusCode.APPLIED, ApplicationStatusCode.REVIEWING)
+
+        val result = repository.getAppliedVacancies(
+            userId = USER_ID,
+            limit = 9,
+            offset = 4,
+            applicationStatuses = statuses,
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(SEEKER_ID, vacancyDao.lastAppliedJobSeekerId)
+        assertEquals(9, vacancyDao.lastAppliedLimit)
+        assertEquals(4, vacancyDao.lastAppliedOffset)
+        assertEquals(statuses, vacancyDao.lastAppliedApplicationStatuses)
     }
 
     @Test
@@ -343,6 +365,8 @@ class DefaultVacancyRepositoryTest {
             private set
         var lastAppliedOffset: Int? = null
             private set
+        var lastAppliedApplicationStatuses: List<ApplicationStatusCode>? = null
+            private set
         var lastAppliedUserIdSeenBySeekerDao: Long? = null
 
         override suspend fun createVacancy(vacancy: VacancyEntity): Long = vacancy.id
@@ -374,10 +398,12 @@ class DefaultVacancyRepositoryTest {
             jobSeekerId: Long,
             limit: Int,
             offset: Int,
+            applicationStatuses: List<ApplicationStatusCode>,
         ): List<VacancyWithDetailsEntity> {
             lastAppliedJobSeekerId = jobSeekerId
             lastAppliedLimit = limit
             lastAppliedOffset = offset
+            lastAppliedApplicationStatuses = applicationStatuses
             return appliedVacancies
         }
 

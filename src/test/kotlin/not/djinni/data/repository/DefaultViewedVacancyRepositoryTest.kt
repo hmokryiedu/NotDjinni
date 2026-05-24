@@ -14,6 +14,7 @@ import not.djinni.database.api.viewed.ViewedVacancyDao
 import not.djinni.database.api.viewed.ViewedVacancyEntity
 import not.djinni.database.api.viewed.ViewedVacancyWithDetailsEntity
 import not.djinni.domain.exception.viewed.ViewedVacancyException
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.JobCategoryCode
 import not.djinni.model.vacancy.VacancyStatusCode
 import kotlin.test.Test
@@ -171,7 +172,12 @@ class DefaultViewedVacancyRepositoryTest {
         override suspend fun deleteVacancy(id: Long): Boolean = true
         override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyEntity> = listOf(vacancyEntity())
         override suspend fun getVacanciesWithDetails(filter: VacancyFilter, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails())
-        override suspend fun getAppliedVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails())
+        override suspend fun getAppliedVacancies(
+            jobSeekerId: Long,
+            limit: Int,
+            offset: Int,
+            applicationStatuses: List<ApplicationStatusCode>,
+        ): List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails())
         override suspend fun countVacancies(filter: VacancyFilter): Int = 1
         override suspend fun getVacanciesByCompany(companyId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = listOf(vacancyWithDetails())
         override suspend fun getRecentVacancies(limit: Int): List<VacancyEntity> = listOf(vacancyEntity())

@@ -3,10 +3,17 @@ ktor:
     modules:
       - not.djinni.ApplicationKt.module
   deployment:
-    port: 8080
-    host: "192.168.0.81"
+    port: ${PORT:8080}
+    host: ${HOST:0.0.0.0}
 
 jwt:
-  issuer: "http://192.168.0.81:8080"
-  audience: "http://192.168.0.81:8080"
-  realm: "NotDjinni API"
+  issuer: ${JWT_ISSUER:http://localhost:8080}
+  audience: ${JWT_AUDIENCE:http://localhost:8080}
+  realm: ${JWT_REALM:NotDjinni API}
+  privateKeyPath: ${JWT_PRIVATE_KEY_PATH:keys/private_key.pem}
+  publicKeyPath: ${JWT_PUBLIC_KEY_PATH:keys/public_key.pem}
+
+database:
+  jdbcUrl: ${DATABASE_URL:jdbc:postgresql://localhost:5432/notdjinni}
+  username: ${DATABASE_USER:notdjinni}
+  password: ${DATABASE_PASSWORD:notdjinnipassword}

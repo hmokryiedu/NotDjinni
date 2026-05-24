@@ -1,6 +1,7 @@
 package not.djinni.database
 
 import kotlinx.coroutines.Dispatchers
+import io.ktor.server.config.yaml.YamlConfigLoader
 import not.djinni.database.impl.application.ApplicationTable
 import not.djinni.database.impl.token.RefreshTokenTable
 import not.djinni.database.impl.template.TemplateTable
@@ -22,11 +23,12 @@ import org.jetbrains.exposed.sql.transactions.transaction
 object NotDjinniDatabase {
 
     private val database: Database by lazy {
+        val config = YamlConfigLoader().load("application.yaml") ?: error("Failed to load application.yaml")
         Database.connect(
-            "jdbc:postgresql://localhost:5432/notdjinni",
+            config.property("database.jdbcUrl").getString(),
             driver = "org.postgresql.Driver",
-            user = "notdjinni",
-            password = "notdjinnipassword"
+            user = config.property("database.username").getString(),
+            password = config.property("database.password").getString()
         )
     }
 

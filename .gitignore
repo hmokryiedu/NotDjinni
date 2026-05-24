@@ -36,7 +36,11 @@ out/
 .vscode/
 
 /keys
+/deploy/.env
+/deploy/keys
 .kotlin
 .DS_Store
 
 /ai/specs
+/ai/report
+/ai/docs

@@ -32,7 +32,8 @@ class DefaultCompanyDao : CompanyDao {
     }
 
     override suspend fun searchCompaniesByName(name: String): List<CompanyEntity> = runQuery {
-        CompanyTableEntity.find { CompanyTable.companyName.lowerCase() like "%$name%" }
+        val normalizedName = name.lowercase()
+        CompanyTableEntity.find { CompanyTable.companyName.lowerCase() like "%$normalizedName%" }
             .map { it.toEntity() }
     }
 

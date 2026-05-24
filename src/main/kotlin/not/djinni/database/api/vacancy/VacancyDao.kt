@@ -1,6 +1,7 @@
 package not.djinni.database.api.vacancy
 
 import not.djinni.database.api.employer.CompanyEntity
+import not.djinni.model.application.ApplicationStatusCode
 
 interface VacancyDao {
     suspend fun createVacancy(vacancy: VacancyEntity): Long
@@ -10,7 +11,12 @@ interface VacancyDao {
     suspend fun deleteVacancy(id: Long): Boolean
     suspend fun getVacancies(filter: VacancyFilter, limit: Int = 20, offset: Int = 0): List<VacancyEntity>
     suspend fun getVacanciesWithDetails(filter: VacancyFilter, limit: Int = 20, offset: Int = 0): List<VacancyWithDetailsEntity>
-    suspend fun getAppliedVacancies(jobSeekerId: Long, limit: Int = 20, offset: Int = 0): List<VacancyWithDetailsEntity>
+    suspend fun getAppliedVacancies(
+        jobSeekerId: Long,
+        limit: Int = 20,
+        offset: Int = 0,
+        applicationStatuses: List<ApplicationStatusCode> = emptyList(),
+    ): List<VacancyWithDetailsEntity>
     suspend fun countVacancies(filter: VacancyFilter): Int
     suspend fun getVacanciesByCompany(companyId: Long, limit: Int = 20, offset: Int = 0): List<VacancyWithDetailsEntity>
     suspend fun getRecentVacancies(limit: Int = 10): List<VacancyEntity>

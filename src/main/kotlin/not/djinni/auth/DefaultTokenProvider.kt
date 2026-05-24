@@ -25,13 +25,17 @@ class DefaultTokenProvider : TokenProvider {
         val config = YamlConfigLoader().load("application.yaml") ?: run {
             error("Failed to load application.yaml")
         }
+        val privateKeyPath = config.property("jwt.privateKeyPath").getString()
+        val publicKeyPath = config.property("jwt.publicKeyPath").getString()
         configuration = JwtConfiguration(
             issuer = config.property("jwt.issuer").getString(),
             audience = config.property("jwt.audience").getString(),
             realm = config.property("jwt.realm").getString(),
-            publicKey = loadPublicKey()
+            privateKeyPath = privateKeyPath,
+            publicKeyPath = publicKeyPath,
+            publicKey = loadPublicKey(path = publicKeyPath)
         )
-        privateKey = loadPrivateKey()
+        privateKey = loadPrivateKey(path = privateKeyPath)
     }
 
     override fun generate(id: Long): String {
@@ -43,15 +47,15 @@ class DefaultTokenProvider : TokenProvider {
             .sign(Algorithm.RSA256(configuration.publicKey, privateKey))
     }
 
-    private fun loadPrivateKey(): RSAPrivateKey {
-        val decoded = extractKeyContent("keys/private_key.pem")
+    private fun loadPrivateKey(path: String): RSAPrivateKey {
+        val decoded = extractKeyContent(path)
         val keySpec = PKCS8EncodedKeySpec(decoded)
         val keyFactory = KeyFactory.getInstance("RSA")
         return keyFactory.generatePrivate(keySpec) as RSAPrivateKey
     }
 
-    private fun loadPublicKey(): RSAPublicKey {
-        val decoded = extractKeyContent("keys/public_key.pem")
+    private fun loadPublicKey(path: String): RSAPublicKey {
+        val decoded = extractKeyContent(path)
         val keySpec = X509EncodedKeySpec(decoded)
         val keyFactory = KeyFactory.getInstance("RSA")
         return keyFactory.generatePublic(keySpec) as RSAPublicKey

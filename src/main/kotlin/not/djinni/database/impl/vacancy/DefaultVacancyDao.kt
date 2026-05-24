@@ -10,6 +10,7 @@ import not.djinni.database.impl.employer.CompanyTable
 import not.djinni.database.impl.employer.CompanyTableEntity
 import not.djinni.database.impl.employer.toEntity
 import not.djinni.database.impl.seeker.SeekerProfileTable
+import not.djinni.model.application.ApplicationStatusCode
 import not.djinni.model.vacancy.VacancyStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -130,12 +131,18 @@ class DefaultVacancyDao : VacancyDao {
         jobSeekerId: Long,
         limit: Int,
         offset: Int,
+        applicationStatuses: List<ApplicationStatusCode>,
     ): List<VacancyWithDetailsEntity> = runQuery {
         val rows = VacancyTable
             .innerJoin(ApplicationTable, { VacancyTable.id }, { ApplicationTable.vacancyId })
             .innerJoin(CompanyTable, { VacancyTable.companyId }, { CompanyTable.id })
             .selectAll()
             .where { ApplicationTable.jobSeekerId eq EntityID(jobSeekerId, SeekerProfileTable) }
+            .apply {
+                if (applicationStatuses.isNotEmpty()) {
+                    andWhere { ApplicationTable.statusCode inList applicationStatuses }
+                }
+            }
             .orderBy(ApplicationTable.createdAt to SortOrder.DESC)
             .limit(n = limit, offset = offset.toLong())
             .toList()
