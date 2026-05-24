@@ -135,6 +135,30 @@ class DefaultApplicationRepositoryTest {
         assertIs<ApplicationException.Unauthorized>(result.exceptionOrNull())
     }
 
+    @Test
+    fun `getVacancyApplications keeps withdrawn applications and does not set status filter`() = runBlocking {
+        val withdrawnApplication = applicationWithDetails(status = ApplicationStatusCode.WITHDRAWN)
+        val activeApplication = applicationWithDetails(status = ApplicationStatusCode.APPLIED)
+        val applicationDao = FakeApplicationDao(applications = listOf(withdrawnApplication, activeApplication))
+        val repository = repository(applicationDao = applicationDao)
+
+        val result = repository.getVacancyApplications(
+            userId = USER_ID,
+            vacancyId = VACANCY_ID,
+            limit = 20,
+            offset = 0
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            listOf(ApplicationStatusCode.WITHDRAWN, ApplicationStatusCode.APPLIED),
+            result.getOrThrow().map { it.statusCode }
+        )
+        val filter = applicationDao.applicationQueries.single()
+        assertEquals(VACANCY_ID, filter.vacancyId)
+        assertEquals(null, filter.statusCode)
+    }
+
     private fun repository(
         applicationDao: ApplicationDao = FakeApplicationDao(),
         seekerProfileDao: SeekerProfileDao = FakeSeekerProfileDao(),

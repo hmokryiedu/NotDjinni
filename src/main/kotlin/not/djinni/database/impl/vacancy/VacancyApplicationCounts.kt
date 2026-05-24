@@ -1,9 +1,7 @@
 package not.djinni.database.impl.vacancy
 
 import not.djinni.database.impl.application.ApplicationTable
-import not.djinni.model.application.ApplicationStatusCode
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.count
 
 internal fun countApplicationsByVacancyIds(vacancyIds: List<Long>): Map<Long, Int> {
@@ -14,8 +12,7 @@ internal fun countApplicationsByVacancyIds(vacancyIds: List<Long>): Map<Long, In
     return ApplicationTable
         .select(ApplicationTable.vacancyId, countExpression)
         .where {
-            (ApplicationTable.vacancyId inList vacancyEntityIds) and
-                (ApplicationTable.statusCode neq ApplicationStatusCode.WITHDRAWN)
+            ApplicationTable.vacancyId inList vacancyEntityIds
         }
         .groupBy(ApplicationTable.vacancyId)
         .associate { row ->
