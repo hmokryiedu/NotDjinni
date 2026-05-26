@@ -3,6 +3,8 @@ package not.djinni.data.repository
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import not.djinni.database.api.employer.CompanyEntity
+import not.djinni.database.api.favorite.FavoriteVacancyDao
+import not.djinni.database.api.favorite.FavoriteVacancyEntity
 import not.djinni.database.api.seeker.SeekerProfileDao
 import not.djinni.database.api.seeker.SeekerProfileEntity
 import not.djinni.database.api.seeker.WorkExperienceEntity
@@ -102,6 +104,18 @@ class DefaultViewedVacancyRepositoryTest {
     }
 
     @Test
+    fun `getViewedVacancies marks favorites in bulk`() = runBlocking {
+        val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
+        val repository = repository(favoriteVacancyDao = favoriteDao)
+
+        val result = repository.getViewedVacancies(userId = USER_ID, limit = 20, offset = 0)
+
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrThrow().single().vacancy.isFavorite)
+        assertEquals(SEEKER_ID to setOf(VACANCY_ID), favoriteDao.lastFavoriteIdsRequest)
+    }
+
+    @Test
     fun `getViewedVacancies returns SeekerProfileNotFound when seeker profile is missing`() = runBlocking {
         val repository = repository(seekerProfileDao = FakeSeekerProfileDao(profile = null))
 
@@ -114,10 +128,12 @@ class DefaultViewedVacancyRepositoryTest {
         viewedDao: ViewedVacancyDao = FakeViewedVacancyDao(),
         seekerProfileDao: SeekerProfileDao = FakeSeekerProfileDao(),
         vacancyDao: VacancyDao = FakeVacancyDao(),
+        favoriteVacancyDao: FavoriteVacancyDao = FakeFavoriteVacancyDao(),
     ) = DefaultViewedVacancyRepository(
         viewedVacancyDao = viewedDao,
         seekerProfileDao = seekerProfileDao,
         vacancyDao = vacancyDao,
+        favoriteVacancyDao = favoriteVacancyDao,
     )
 
     private class FakeViewedVacancyDao : ViewedVacancyDao {
@@ -146,6 +162,21 @@ class DefaultViewedVacancyRepositoryTest {
 
         override suspend fun countViewsByVacancyIds(vacancyIds: Set<Long>): Map<Long, Int> {
             return vacancyIds.associateWith { 2 }
+        }
+    }
+
+    private class FakeFavoriteVacancyDao(
+        private val favoriteIds: Set<Long> = emptySet(),
+    ) : FavoriteVacancyDao {
+        var lastFavoriteIdsRequest: Pair<Long, Set<Long>>? = null
+
+        override suspend fun addFavoriteVacancy(favorite: FavoriteVacancyEntity): Boolean = true
+        override suspend fun removeFavoriteVacancy(vacancyId: Long, jobSeekerId: Long): Boolean = true
+        override suspend fun getFavoriteVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
+        override suspend fun favoriteExists(vacancyId: Long, jobSeekerId: Long): Boolean = favoriteIds.contains(vacancyId)
+        override suspend fun getFavoriteVacancyIds(jobSeekerId: Long, vacancyIds: Set<Long>): Set<Long> {
+            lastFavoriteIdsRequest = jobSeekerId to vacancyIds
+            return favoriteIds.intersect(vacancyIds)
         }
     }
 

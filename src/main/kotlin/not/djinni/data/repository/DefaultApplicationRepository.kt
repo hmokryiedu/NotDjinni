@@ -5,7 +5,9 @@ import not.djinni.data.mapper.toDomain
 import not.djinni.data.mapper.toEntity
 import not.djinni.database.api.application.ApplicationDao
 import not.djinni.database.api.application.ApplicationFilter
+import not.djinni.database.api.application.ApplicationWithDetailsEntity
 import not.djinni.database.api.employer.EmployerProfileDao
+import not.djinni.database.api.favorite.FavoriteVacancyDao
 import not.djinni.database.api.seeker.SeekerProfileDao
 import not.djinni.database.api.vacancy.VacancyDao
 import not.djinni.domain.exception.application.ApplicationException
@@ -19,7 +21,8 @@ class DefaultApplicationRepository(
     private val applicationDao: ApplicationDao,
     private val seekerProfileDao: SeekerProfileDao,
     private val vacancyDao: VacancyDao,
-    private val employerProfileDao: EmployerProfileDao
+    private val employerProfileDao: EmployerProfileDao,
+    private val favoriteVacancyDao: FavoriteVacancyDao,
 ) : ApplicationRepository {
 
     override suspend fun createApplication(userId: Long, application: Application) = runCatching {
@@ -53,7 +56,14 @@ class DefaultApplicationRepository(
         val isOwner = seekerProfile?.id == appWithDetails.application.jobSeekerId
         val isEmployer = employerProfile?.company?.id == appWithDetails.vacancy.company.id
         if (!isOwner && !isEmployer) throw ApplicationException.Unauthorized()
-        appWithDetails.toDomain()
+        if (isOwner) {
+            enrichFavoriteFlag(
+                seekerProfileId = appWithDetails.application.jobSeekerId,
+                application = appWithDetails,
+            ).toDomain()
+        } else {
+            appWithDetails.toDomain()
+        }
     }
 
     override suspend fun updateApplication(userId: Long, application: Application) = runCatching<Unit> {
@@ -138,10 +148,14 @@ class DefaultApplicationRepository(
             throw ApplicationException.SeekerProfileNotFound()
         }
         val seekerFilter = filter.copy(jobSeekerId = seekerProfile.id)
-        applicationDao.getApplications(
+        val applications = applicationDao.getApplications(
             filter = seekerFilter,
             limit = limit,
             offset = offset
+        )
+        enrichFavoriteFlags(
+            seekerProfileId = seekerProfile.id,
+            applications = applications,
         ).map { it.toDomain() }
     }
 
@@ -153,10 +167,13 @@ class DefaultApplicationRepository(
             throw ApplicationException.SeekerProfileNotFound()
         }
         val filter = ApplicationFilter(vacancyId = vacancyId, jobSeekerId = seekerProfile.id)
-        applicationDao.getApplications(filter = filter, limit = 1, offset = 0)
+        val application = applicationDao.getApplications(filter = filter, limit = 1, offset = 0)
             .firstOrNull()
-            ?.toDomain()
             ?: throw ApplicationException.ApplicationNotFound()
+        enrichFavoriteFlag(
+            seekerProfileId = seekerProfile.id,
+            application = application,
+        ).toDomain()
     }
 
     override suspend fun getVacancyApplications(
@@ -179,5 +196,41 @@ class DefaultApplicationRepository(
     override suspend fun hasApplied(userId: Long, vacancyId: Long) = runCatching {
         val seekerProfile = seekerProfileDao.getProfileByUserId(userId) ?: return@runCatching false
         applicationDao.hasApplied(vacancyId, seekerProfile.id)
+    }
+
+    private suspend fun enrichFavoriteFlags(
+        seekerProfileId: Long,
+        applications: List<ApplicationWithDetailsEntity>,
+    ): List<ApplicationWithDetailsEntity> {
+        val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
+            jobSeekerId = seekerProfileId,
+            vacancyIds = applications.map { it.vacancy.vacancy.id }.toSet(),
+        )
+        return applications.map { application ->
+            application.copy(
+                vacancy = application.vacancy.copy(
+                    vacancy = application.vacancy.vacancy.copy(
+                        isFavorite = favoriteVacancyIds.contains(application.vacancy.vacancy.id),
+                    )
+                )
+            )
+        }
+    }
+
+    private suspend fun enrichFavoriteFlag(
+        seekerProfileId: Long,
+        application: ApplicationWithDetailsEntity,
+    ): ApplicationWithDetailsEntity {
+        val favoriteVacancyIds = favoriteVacancyDao.getFavoriteVacancyIds(
+            jobSeekerId = seekerProfileId,
+            vacancyIds = setOf(application.vacancy.vacancy.id),
+        )
+        return application.copy(
+            vacancy = application.vacancy.copy(
+                vacancy = application.vacancy.vacancy.copy(
+                    isFavorite = favoriteVacancyIds.contains(application.vacancy.vacancy.id),
+                )
+            )
+        )
     }
 }

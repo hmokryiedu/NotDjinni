@@ -3,6 +3,7 @@ package not.djinni.domain.usecase.vacancy
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import not.djinni.database.api.vacancy.VacancyFilter
+import not.djinni.database.api.vacancy.VacancyTitleRelevance
 import not.djinni.domain.repository.SeekerProfileRepository
 import not.djinni.domain.repository.VacancyRepository
 import not.djinni.model.application.ApplicationStatusCode
@@ -41,19 +42,42 @@ class GetRecommendedVacanciesForSeekerUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(25, result.getOrThrow().single().viewsCount)
+        assertEquals(USER_ID, vacancyRepository.lastPublicForSeekerUserId)
+        val passedFilter = vacancyRepository.lastPublicForSeekerFilter
+        assertEquals("Kotlin", passedFilter?.searchQuery)
+        assertEquals(5000, passedFilter?.salaryMin)
+        assertEquals(5, passedFilter?.experienceYears)
+        assertEquals(listOf(JobCategoryCode.SOFTWARE_DEV), passedFilter?.categories)
+        assertEquals(
+            VacancyTitleRelevance(
+                primaryPhrase = "Backend Developer",
+                secondaryPhrases = listOf("Senior Kotlin Engineer"),
+                tokens = listOf("backend", "developer", "senior", "kotlin", "engineer"),
+            ),
+            passedFilter?.titleRelevance
+        )
     }
 
     private class FakeVacancyRepository(
         private val vacancies: List<VacancyWithDetails>,
     ) : VacancyRepository {
+        var lastPublicForSeekerUserId: Long? = null
+        var lastPublicForSeekerFilter: VacancyFilter? = null
+
         override suspend fun createVacancy(userId: Long, vacancy: Vacancy): Result<VacancyWithDetails> = error("Not needed")
         override suspend fun getVacancy(id: Long): Result<Vacancy> = error("Not needed")
         override suspend fun getVacancyWithDetails(id: Long): Result<VacancyWithDetails> = error("Not needed")
         override suspend fun updateVacancy(userId: Long, vacancy: Vacancy): Result<Unit> = error("Not needed")
         override suspend fun deleteVacancy(userId: Long, id: Long): Result<Unit> = error("Not needed")
-        override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = Result.success(vacancies)
+        override suspend fun getVacancies(filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> {
+            throw AssertionError("Generic getVacancies must not be used for recommendations")
+        }
         override suspend fun getPublicVacancies(filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
-        override suspend fun getPublicVacanciesForSeeker(userId: Long, filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
+        override suspend fun getPublicVacanciesForSeeker(userId: Long, filter: VacancyFilter, limit: Int, offset: Int): Result<List<VacancyWithDetails>> {
+            lastPublicForSeekerUserId = userId
+            lastPublicForSeekerFilter = filter
+            return Result.success(vacancies)
+        }
         override suspend fun getAppliedVacancies(
             userId: Long,
             limit: Int,
@@ -92,6 +116,24 @@ class GetRecommendedVacanciesForSeekerUseCaseTest {
             desiredSalary = 5000,
             experienceYears = 5,
             jobCategory = JobCategoryCode.SOFTWARE_DEV,
+            workExperience = listOf(
+                WorkExperience(
+                    id = 1L,
+                    companyName = "Now",
+                    position = "Senior Kotlin Engineer",
+                    description = null,
+                    startDate = Instant.parse("2025-01-01T00:00:00Z"),
+                    endDate = null,
+                ),
+                WorkExperience(
+                    id = 2L,
+                    companyName = "Before",
+                    position = "Backend Developer",
+                    description = null,
+                    startDate = Instant.parse("2023-01-01T00:00:00Z"),
+                    endDate = Instant.parse("2024-12-31T00:00:00Z"),
+                ),
+            )
         )
 
         fun vacancyWithDetails(viewsCount: Int) = VacancyWithDetails(

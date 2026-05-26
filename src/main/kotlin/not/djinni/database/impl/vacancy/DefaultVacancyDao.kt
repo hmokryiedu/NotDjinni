@@ -248,7 +248,44 @@ class DefaultVacancyDao : VacancyDao {
             if (searchQuery != null) {
                 andWhere { (VacancyTable.title.lowerCase() like "%$searchQuery%") or (VacancyTable.description.lowerCase() like "%$searchQuery%") }
             }
-            orderBy(sortColumn to sortOrder)
+            if (titleRelevance != null) {
+                val rankExpression = titleRelevance.buildRankExpression()
+                orderBy(rankExpression to SortOrder.DESC)
+                orderBy(VacancyTable.createdAt to SortOrder.DESC)
+                orderBy(VacancyTable.title.lowerCase() to SortOrder.ASC)
+                orderBy(VacancyTable.id to SortOrder.ASC)
+            } else {
+                orderBy(sortColumn to sortOrder)
+            }
+        }
+    }
+
+    private fun VacancyTitleRelevance.buildRankExpression(): Expression<Int> {
+        val titleLower = VacancyTable.title.lowerCase()
+        val normalizedPrimaryPhrase = primaryPhrase.trim().lowercase()
+        val normalizedSecondaryPhrases = secondaryPhrases.map { it.trim().lowercase() }.filter { it.isNotBlank() }
+        val normalizedTokens = tokens.map { it.trim().lowercase() }.filter { it.isNotBlank() }
+
+        val primaryExact = Case()
+            .When(SqlExpressionBuilder.run { titleLower eq normalizedPrimaryPhrase }, intLiteral(300))
+            .Else(intLiteral(0))
+        val primaryContains = Case()
+            .When(SqlExpressionBuilder.run { titleLower like "%$normalizedPrimaryPhrase%" }, intLiteral(200))
+            .Else(intLiteral(0))
+        val secondaryContains = normalizedSecondaryPhrases.map { phrase ->
+            Case()
+                .When(SqlExpressionBuilder.run { titleLower like "%$phrase%" }, intLiteral(120))
+                .Else(intLiteral(0))
+        }
+        val tokenMatches = normalizedTokens.map { token ->
+            Case()
+                .When(SqlExpressionBuilder.run { titleLower like "%$token%" }, intLiteral(40))
+                .Else(intLiteral(0))
+        }
+        val rankParts = listOf(primaryExact, primaryContains) + secondaryContains + tokenMatches
+
+        return rankParts.drop(1).fold(rankParts.first()) { acc, part ->
+            SqlExpressionBuilder.run { acc + part }
         }
     }
 

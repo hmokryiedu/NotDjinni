@@ -23,6 +23,13 @@ data class VacancyFilter(
     val salaryMax: Int? = null,
     val experienceYears: Int? = null,
     val searchQuery: String? = null,
+    val titleRelevance: VacancyTitleRelevance? = null,
     val sortBy: VacancySortField = VacancySortField.CREATED_AT,
     val sortDirection: SortDirection = SortDirection.DESC
+)
+
+data class VacancyTitleRelevance(
+    val primaryPhrase: String,
+    val secondaryPhrases: List<String> = emptyList(),
+    val tokens: List<String> = emptyList(),
 )

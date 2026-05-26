@@ -10,6 +10,8 @@ import not.djinni.database.api.employer.CompanyEntity
 import not.djinni.database.api.employer.EmployerProfileDao
 import not.djinni.database.api.employer.EmployerProfileEntity
 import not.djinni.database.api.employer.EmployerProfileWithCompany
+import not.djinni.database.api.favorite.FavoriteVacancyDao
+import not.djinni.database.api.favorite.FavoriteVacancyEntity
 import not.djinni.database.api.seeker.SeekerProfileDao
 import not.djinni.database.api.seeker.SeekerProfileEntity
 import not.djinni.database.api.seeker.WorkExperienceEntity
@@ -28,6 +30,45 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class DefaultApplicationRepositoryTest {
+
+    @Test
+    fun `getMyApplications marks seeker favorite vacancies in bulk`() = runBlocking {
+        val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
+        val repository = repository(favoriteVacancyDao = favoriteDao)
+
+        val result = repository.getMyApplications(userId = USER_ID, filter = ApplicationFilter(), limit = 20, offset = 0)
+
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrThrow().single().vacancy.isFavorite)
+        assertEquals(SEEKER_ID to setOf(VACANCY_ID), favoriteDao.lastFavoriteIdsRequest)
+    }
+
+    @Test
+    fun `getApplication marks favorite for seeker owner`() = runBlocking {
+        val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
+        val repository = repository(favoriteVacancyDao = favoriteDao)
+
+        val result = repository.getApplication(userId = USER_ID, id = APPLICATION_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrThrow().vacancy.isFavorite)
+    }
+
+    @Test
+    fun `getApplication for employer does not enrich seeker favorite`() = runBlocking {
+        val favoriteDao = FakeFavoriteVacancyDao(favoriteIds = setOf(VACANCY_ID))
+        val repository = repository(
+            seekerProfileDao = FakeSeekerProfileDao(profile = null),
+            employerProfileDao = FakeEmployerProfileDao(userId = USER_ID),
+            favoriteVacancyDao = favoriteDao,
+        )
+
+        val result = repository.getApplication(userId = USER_ID, id = APPLICATION_ID)
+
+        assertTrue(result.isSuccess)
+        assertEquals(false, result.getOrThrow().vacancy.isFavorite)
+        assertEquals(null, favoriteDao.lastFavoriteIdsRequest)
+    }
 
     @Test
     fun `getMyApplicationByVacancy returns current seeker application for vacancy`() = runBlocking {
@@ -162,11 +203,14 @@ class DefaultApplicationRepositoryTest {
     private fun repository(
         applicationDao: ApplicationDao = FakeApplicationDao(),
         seekerProfileDao: SeekerProfileDao = FakeSeekerProfileDao(),
+        employerProfileDao: EmployerProfileDao = FakeEmployerProfileDao(),
+        favoriteVacancyDao: FavoriteVacancyDao = FakeFavoriteVacancyDao(),
     ) = DefaultApplicationRepository(
         applicationDao = applicationDao,
         seekerProfileDao = seekerProfileDao,
         vacancyDao = FakeVacancyDao(),
-        employerProfileDao = FakeEmployerProfileDao(),
+        employerProfileDao = employerProfileDao,
+        favoriteVacancyDao = favoriteVacancyDao,
     )
 
     private class FakeApplicationDao(
@@ -238,13 +282,30 @@ class DefaultApplicationRepositoryTest {
         override suspend fun vacancyExists(id: Long): Boolean = true
     }
 
-    private class FakeEmployerProfileDao : EmployerProfileDao {
+    private class FakeEmployerProfileDao(
+        private val userId: Long = 29L,
+    ) : EmployerProfileDao {
         override suspend fun createProfile(profile: EmployerProfileEntity): Long = profile.id
         override suspend fun getProfile(id: Long): EmployerProfileWithCompany? = employerProfile()
-        override suspend fun getProfileByUserId(userId: Long): EmployerProfileWithCompany? = employerProfile()
+        override suspend fun getProfileByUserId(userId: Long): EmployerProfileWithCompany? = employerProfile(userId = this.userId)
         override suspend fun updateProfile(profile: EmployerProfileEntity): Boolean = true
         override suspend fun deleteProfile(id: Long): Boolean = true
         override suspend fun profileExists(userId: Long): Boolean = true
+    }
+
+    private class FakeFavoriteVacancyDao(
+        private val favoriteIds: Set<Long> = emptySet(),
+    ) : FavoriteVacancyDao {
+        var lastFavoriteIdsRequest: Pair<Long, Set<Long>>? = null
+
+        override suspend fun addFavoriteVacancy(favorite: FavoriteVacancyEntity): Boolean = true
+        override suspend fun removeFavoriteVacancy(vacancyId: Long, jobSeekerId: Long): Boolean = true
+        override suspend fun getFavoriteVacancies(jobSeekerId: Long, limit: Int, offset: Int): List<VacancyWithDetailsEntity> = emptyList()
+        override suspend fun favoriteExists(vacancyId: Long, jobSeekerId: Long): Boolean = favoriteIds.contains(vacancyId)
+        override suspend fun getFavoriteVacancyIds(jobSeekerId: Long, vacancyIds: Set<Long>): Set<Long> {
+            lastFavoriteIdsRequest = jobSeekerId to vacancyIds
+            return favoriteIds.intersect(vacancyIds)
+        }
     }
 
     private companion object {
@@ -308,8 +369,8 @@ class DefaultApplicationRepositoryTest {
             ),
         )
 
-        fun employerProfile() = EmployerProfileWithCompany(
-            profile = EmployerProfileEntity(id = 23L, userId = 29L, companyId = COMPANY_ID, role = "Owner"),
+        fun employerProfile(userId: Long = 29L) = EmployerProfileWithCompany(
+            profile = EmployerProfileEntity(id = 23L, userId = userId, companyId = COMPANY_ID, role = "Owner"),
             company = CompanyEntity(
                 id = COMPANY_ID,
                 companyName = "Not Djinni",
