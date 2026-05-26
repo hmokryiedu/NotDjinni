@@ -166,12 +166,17 @@ class DefaultVacancyRepository(
         vacancyDao.countVacancies(filter)
     }
 
-    override suspend fun getEmployerVacancies(userId: Long, limit: Int, offset: Int) = runCatching {
+    override suspend fun getEmployerVacancies(userId: Long, limit: Int, offset: Int, searchQuery: String?) = runCatching {
         val employerProfile = employerProfileDao.getProfileByUserId(userId) ?: run {
             throw VacancyException.Unauthorized("No employer profile found")
         }
+        val normalizedSearchQuery = searchQuery?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+        val filter = VacancyFilter(
+            companyId = employerProfile.company.id,
+            searchQuery = normalizedSearchQuery,
+        )
         vacancyDao
-            .getVacanciesByCompany(companyId = employerProfile.company.id, limit = limit, offset = offset)
+            .getVacanciesWithDetails(filter = filter, limit = limit, offset = offset)
             .map { it.toDomain() }
     }
 

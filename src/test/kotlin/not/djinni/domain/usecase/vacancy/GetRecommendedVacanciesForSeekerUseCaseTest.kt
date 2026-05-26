@@ -89,7 +89,12 @@ class GetRecommendedVacanciesForSeekerUseCaseTest {
         override suspend fun getPublicRecentVacancies(limit: Int): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun getPublicCompanyVacancies(companyId: Long, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun countVacancies(filter: VacancyFilter): Result<Int> = error("Not needed")
-        override suspend fun getEmployerVacancies(userId: Long, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
+        override suspend fun getEmployerVacancies(
+            userId: Long,
+            limit: Int,
+            offset: Int,
+            searchQuery: String?,
+        ): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun getCompanyVacancies(companyId: Long, limit: Int, offset: Int): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun getRecentVacancies(limit: Int): Result<List<VacancyWithDetails>> = error("Not needed")
         override suspend fun updateVacancyStatus(userId: Long, id: Long, status: VacancyStatusCode): Result<Unit> = error("Not needed")

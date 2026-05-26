@@ -83,7 +83,8 @@ class EmployerRoute(
                 val queryParams = call.request.queryParameters
                 val limit = queryParams[LIMIT_PARAM]?.toIntOrNull() ?: LIMIT_DEFAULT
                 val offset = queryParams[OFFSET_PARAM]?.toIntOrNull() ?: OFFSET_DEFAULT
-                vacancyRepository.getEmployerVacancies(userId = userId, limit = limit, offset = offset)
+                val search = queryParams[SEARCH_PARAM]
+                vacancyRepository.getEmployerVacancies(userId = userId, limit = limit, offset = offset, searchQuery = search)
                     .onSuccess { vacancies -> call.respond(vacancies.toResponseList()) }
                     .handleError(call = call, mapToCode = VacancyException::toStatusCode)
             }
@@ -104,6 +105,7 @@ class EmployerRoute(
     private companion object {
         const val LIMIT_PARAM = "limit"
         const val OFFSET_PARAM = "offset"
+        const val SEARCH_PARAM = "search"
 
         const val LIMIT_DEFAULT = 20
         const val OFFSET_DEFAULT = 0

@@ -293,6 +293,27 @@ class DefaultVacancyRepositoryTest {
     }
 
     @Test
+    fun `getEmployerVacancies applies company and normalized search filter with limit and offset`() = runBlocking {
+        val vacancyDao = FakeVacancyDao()
+        val repository = repository(vacancyDao)
+
+        val result = repository.getEmployerVacancies(
+            userId = USER_ID,
+            limit = 9,
+            offset = 4,
+            searchQuery = "  Kotlin  ",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            VacancyFilter(companyId = COMPANY_ID, searchQuery = "kotlin"),
+            vacancyDao.lastDetailsFilter
+        )
+        assertEquals(9, vacancyDao.lastDetailsLimit)
+        assertEquals(4, vacancyDao.lastDetailsOffset)
+    }
+
+    @Test
     fun `guest public vacancy detail leaves favorite state absent`() = runBlocking {
         val repository = repository(FakeVacancyDao())
 
